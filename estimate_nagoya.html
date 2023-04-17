@@ -87,7 +87,16 @@
 
         async function calculateEstimate() {
             const overtimeFee = document.getElementById("overtimeFee").value;
-const transportationFee = document.getElementById("transportationFee").value;
+            const transportationFee = document.getElementById("transportationFee").value;
+            
+            const high_seasons = [
+                {from: '2023/03/17', to: '2023/04/10'},
+                {from: '2023/04/21', to: '2023/05/08'},
+                {from: '2023/07/14', to: '2023/08/31'},
+                {from: '2023/09/15', to: '2022/09/25'},
+                {from: '2023/12/22', to: '2024/01/09'},
+            ]
+            
             const rankPrice = {
                 "A": { "base": 1100, "additional": 550 },
                 "B": { "base": 550, "additional": 0 },
@@ -157,6 +166,32 @@ if (transportationFee) {
 ${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
 ${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
 
+              function isDateInHighSeason(date, high_seasons) {
+                for (const season of high_seasons) {
+                  const fromDate = new Date(season.from);
+                  const toDate = new Date(season.to);
+                  if (date >= fromDate && date <= toDate) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+
+              const checkIn = new Date(checkInDate);
+              const checkOut = new Date(checkOutDate);
+              let highSeasonDetected = false;
+
+              while (checkIn <= checkOut) {
+                if (isDateInHighSeason(checkIn, high_seasons)) {
+                  highSeasonDetected = true;
+                  break;
+                }
+                checkIn.setDate(checkIn.getDate() + 1);
+              }
+
+              if (highSeasonDetected) {
+                estimate.innerHTML += `<br※この期間は特別時期（シーズン期間）が設定されていますので、キャンセル料はご予約時からお見積料金の50%となります。あらかじめご了承いただきますようお願い申し上げます。`;
+              }
 
         }
 
