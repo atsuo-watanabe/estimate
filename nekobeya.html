@@ -1,1 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>羽田空港店のお見積もり</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <style>
+      body {
+          font-family: Arial, sans-serif;
+          max-width: 800px;
+          margin: 0 auto;
+          background-color: #f5f5f5;
+          padding: 20px;
+      }
 
+      h1 {
+          text-align: center;
+          color: #333;
+      }
+
+      form {
+          background-color: #fff;
+          border-radius: 5px;
+          padding: 20px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      label {
+          display: block;
+          font-weight: bold;
+          margin-bottom: 5px;
+      }
+
+      input, select {
+          width: 100%;
+          padding: 5px;
+          font-size: 14px;
+          margin-bottom: 20px;
+          box-sizing: border-box;
+      }
+
+      button {
+          background-color: #4CAF50;
+          color: white;
+          padding: 10px 20px;
+          font-size: 14px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+      }
+
+      button:hover {
+          background-color: #45a049;
+      }
+
+      #estimate {
+          background-color: #fff;
+          margin-top: 20px;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+  </style>
+       <script>
+        async function getRankDates() {
+            const sheetId = "1KfvWc2JyfNd9nn8hltn7rcCCVV2WLfcJPF8orf1rGw4";
+            const sheetName = "rankDates";
+            const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/1KfvWc2JyfNd9nn8hltn7rcCCVV2WLfcJPF8orf1rGw4/values/%E3%82%B7%E3%83%BC%E3%83%881?key=AIzaSyAcz2u3GPrFVEpGxW5ZxtOTMRbYHDebPxg`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            const values = data.values;
+            const rankDates = {};
+
+            // Convert values into object
+            if (values) {
+                for (let i = 1; i < values.length; i++) {
+                    const row = values[i];
+                    const date = moment(row[0]).format("YYYY-MM-DD");
+                    const rank = row[1];
+                    rankDates[date] = rank;
+                }
+            }
+
+            return rankDates;
+        }
+
+        async function calculateEstimate() {
+            const overtimeFee = document.getElementById("overtimeFee").value;
+            const transportationFee = document.getElementById("transportationFee").value;
+            const high_seasons = [
+                {from: '2023/03/17', to: '2023/04/10'},
+                {from: '2023/04/21', to: '2023/05/08'},
+                {from: '2023/07/14', to: '2023/08/31'},
+                {from: '2023/09/15', to: '2022/09/25'},
+                {from: '2023/12/22', to: '2024/01/09'},
+            ]
+            const rankPrice = {
+                "A": { "base": 1650, "additional": 1100 },
+                "B": { "base": 1100, "additional": 550 },
+                "C": { "base": 550, "additional": 0 },
+                "D": { "base": 0, "additional": 0 }
+            };
+
+            const roomType = {
+            "4畳部屋": { "base": 7700, "additional": 3300 },
+            "2畳部屋": { "base": 6050, "additional": 3300 },
+            "1畳部屋": { "base": 6050, "additional": 3300 }
+            };
+
+            const rankDates = await getRankDates();
+
+            const checkInDate = document.getElementById("checkInDate").value;
+            const checkOutDate = document.getElementById("checkOutDate").value;
+            const catCount = parseInt(document.getElementById("catCount").value);
+            const selectedRoomType = document.getElementById("roomType").value;
+
+            let currentDate = new Date(checkInDate);
+            const endDate = new Date(checkOutDate);
+            let totalCost = 0;
+            let details = "";
+
+            while (currentDate <= endDate) {
+                const dateString = currentDate.toISOString().split("T")[0];
+                const rank = rankDates[dateString];
+                const roomPrices = roomType[selectedRoomType];
+                const baseCost = roomPrices["base"] + rankPrice[rank]["base"];
+                const additionalCost = (catCount - 1) * (roomPrices["additional"] + rankPrice[rank]["additional"]);
+                const dailyCost = baseCost + additionalCost;
+                totalCost += dailyCost;
+
+                const formattedBaseCost = formatNumberWithCommas(baseCost);
+                const formattedAdditionalCost = formatNumberWithCommas(additionalCost);
+                const formattedDailyCost = formatNumberWithCommas(dailyCost);
+
+                const additionalCats = catCount - 1;
+                const additionalText = additionalCats > 0 ? `猫${additionalCats}匹追加${formattedAdditionalCost}円` : '猫追加無し0円';
+                details += `・${dateString.replace(/-/g, "/")}｜基本${formattedBaseCost}円＋${additionalText}＝${formattedDailyCost}円<br>`;
+                currentDate.setDate(currentDate.getDate() + 1);
+
+            }
+  
+            if (overtimeFee) {
+                totalCost += parseInt(overtimeFee);
+                const formattedOvertimeFee = formatNumberWithCommas(overtimeFee);
+                details += `・時間外手数料：${formattedOvertimeFee}円<br>`;
+              }
+
+              if (transportationFee) {
+                totalCost += parseInt(transportationFee);
+                const formattedTransportationFee = formatNumberWithCommas(transportationFee);
+                details += `・送迎代：${formattedTransportationFee}円<br>`;
+              }
+
+                        function isDateInHighSeason(date, high_seasons) {
+                for (const season of high_seasons) {
+                  const fromDate = new Date(season.from);
+                  const toDate = new Date(season.to);
+                  if (date >= fromDate && date <= toDate) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+
+              const checkIn = new Date(checkInDate);
+              const checkOut = new Date(checkOutDate);
+              let highSeasonDetected = false;
+
+              while (checkIn <= checkOut) {
+                if (isDateInHighSeason(checkIn, high_seasons)) {
+                  highSeasonDetected = true;
+                  break;
+                }
+                checkIn.setDate(checkIn.getDate() + 1);
+              }
+
+              if (highSeasonDetected) {
+                estimate.innerHTML += `<br>※キャンセル料：この期間は特別時期が含まれているため、ご予約お申込時点よりお見積料金の50%を頂きます。`;
+              }
+
+
+
+            estimate.innerHTML = `**************************************<br> ` +
+                                `【チェックイン日】   ：${checkInDate.replace(/-/g, "/")}<br>` +
+                                 `【チェックアウト日】 ：${checkOutDate.replace(/-/g, "/")}<br>` +
+                                 `【ねこ頭数】　　　     ：${catCount}匹<br>` +
+                                 `【お部屋のタイプ】　   ：${selectedRoomType}<br><br>` +
+                                 `【お見積り料金】　        ：${formatNumberWithCommas(totalCost)}円（税込み）<br><br>` +
+                                 `【料金明細】<br>${details}`;
+                                 `<br>
+【追加料金】<br>
+${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
+${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
+
+
+        }
+
+        function formatNumberWithCommas(number) {
+            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function copyEstimate() {
+            const estimate = document.getElementById("estimate");
+            const textArea = document.createElement("textarea");
+            textArea.value = estimate.innerText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            alert("見積もりがクリップボードにコピーされました。");
+        }
+    </script>
+</head>
+<body>
+    <h1>お見積もり</h1>
+    <form>
+      <label>チェックイン日付：<input type="date" id="checkInDate" required></label><br>
+      <label>チェックアウト日付：<input type="date" id="checkOutDate" required></label><br>
+      <label>猫の頭数：
+        <select id="catCount" required>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+        </select>
+      </label><br>
+      <label>お部屋のタイプ：
+        <select id="roomType" required>
+            <option value="4畳部屋">4畳部屋</option>
+            <option value="2畳部屋">2畳部屋</option>
+            <option value="1畳部屋">1畳部屋</option>
+        </select>
+    </label><br>
+    <label>時間外手数料：<input type="number" id="overtimeFee"></label><br>
+<label>送迎代：<input type="number" id="transportationFee"></label><br>
+    <button type="button" onclick="calculateEstimate()">見積もりを計算</button>
+</form>
+<div id="estimate"></div>
+<button type="button" onclick="copyEstimate()" style="margin-top: 10px;">コピーする</button>
+
+<script>
+  function formatNumberWithCommas(number) {
+      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function copyEstimate() {
+      const estimate = document.getElementById("estimate");
+      const textArea = document.createElement("textarea");
+      textArea.value = estimate.innerHTML.replace(/<br>/g, "\n");
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      alert("見積もりがクリップボードにコピーされました。");
+  }
+</script>
+</body>
+</html>
