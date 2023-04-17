@@ -152,7 +152,21 @@
                 details += `・送迎代：${formattedTransportationFee}円<br>`;
               }
 
-                        function isDateInHighSeason(date, high_seasons) {
+
+
+            estimate.innerHTML = `**************************************<br> ` +
+                                `【チェックイン日】   ：${checkInDate.replace(/-/g, "/")}<br>` +
+                                 `【チェックアウト日】 ：${checkOutDate.replace(/-/g, "/")}<br>` +
+                                 `【ねこ頭数】　　　     ：${catCount}匹<br>` +
+                                 `【お部屋のタイプ】　   ：${selectedRoomType}<br><br>` +
+                                 `【お見積り料金】　        ：${formatNumberWithCommas(totalCost)}円（税込み）<br><br>` +
+                                 `【料金明細】<br>${details}`;
+                                 `<br>
+【追加料金】<br>
+${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
+${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
+
+              function isDateInHighSeason(date, high_seasons) {
                 for (const season of high_seasons) {
                   const fromDate = new Date(season.from);
                   const toDate = new Date(season.to);
@@ -178,21 +192,6 @@
               if (highSeasonDetected) {
                 estimate.innerHTML += `<br>※キャンセル料：この期間は特別時期が含まれているため、ご予約お申込時点よりお見積料金の50%を頂きます。`;
               }
-
-
-
-            estimate.innerHTML = `**************************************<br> ` +
-                                `【チェックイン日】   ：${checkInDate.replace(/-/g, "/")}<br>` +
-                                 `【チェックアウト日】 ：${checkOutDate.replace(/-/g, "/")}<br>` +
-                                 `【ねこ頭数】　　　     ：${catCount}匹<br>` +
-                                 `【お部屋のタイプ】　   ：${selectedRoomType}<br><br>` +
-                                 `【お見積り料金】　        ：${formatNumberWithCommas(totalCost)}円（税込み）<br><br>` +
-                                 `【料金明細】<br>${details}`;
-                                 `<br>
-【追加料金】<br>
-${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
-${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
-
 
         }
 
