@@ -166,10 +166,6 @@
 【追加料金】<br>
 ${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
 ${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
-           ` ◎キャンセル規定<br> `
-`・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br> `
-`・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br> `
-`・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br> `
 
               function isDateInHighSeason(date, high_seasons) {
                 for (const season of high_seasons) {
@@ -194,8 +190,15 @@ ${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee
                 checkIn.setDate(checkIn.getDate() + 1);
               }
 
-              if (highSeasonDetected) {
+            if (highSeasonDetected == false) {
                 estimate.innerHTML += `<br>※今回のお申し込み期間は特別時期（シーズン期間）が設定されていますので、キャンセル料はご予約時からお見積料金の50%となります。あらかじめご了承いただきますようお願い申し上げます。`;
+              }
+
+              if (highSeasonDetected) {
+                estimate.innerHTML += `<br>◎キャンセル規定<br>
+・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>
+・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>
+・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br>`;
               }
 
         }
