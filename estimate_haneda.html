@@ -190,11 +190,11 @@ ${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee
                 checkIn.setDate(checkIn.getDate() + 1);
               }
 
-            if (highSeasonDetected == false) {
+            if (highSeasonDetected ) {
                 estimate.innerHTML += `<br>※今回のお申し込み期間は特別時期（シーズン期間）が設定されていますので、キャンセル料はご予約時からお見積料金の50%となります。あらかじめご了承いただきますようお願い申し上げます。`;
               }
 
-              if (highSeasonDetected) {
+              if (highSeasonDetected == false) {
                 estimate.innerHTML += `<br>◎キャンセル規定<br>
 ・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>
 ・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>
