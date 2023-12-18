@@ -89,13 +89,21 @@
             const overtimeFee = document.getElementById("overtimeFee").value;
             const transportationFee = document.getElementById("transportationFee").value;
             
+            async function calculateEstimate() {
+            const overtimeFee = document.getElementById("overtimeFee").value;
+            const transportationFee = document.getElementById("transportationFee").value;
             const high_seasons = [
-                {from: '2023/03/17', to: '2023/04/10'},
-                {from: '2023/04/21', to: '2023/05/08'},
-                {from: '2023/07/14', to: '2023/08/31'},
-                {from: '2023/09/15', to: '2022/09/25'},
-                {from: '2023/12/22', to: '2024/01/09'},
-            ]
+    { from: '2023/12/22', to: '2024/01/09' }, // 年末年始
+    { from: '2024/02/10', to: '2024/02/12' }, // 特別期間（3連休）
+    { from: '2024/02/23', to: '2024/02/25' }, // 特別期間（3連休）
+    { from: '2024/03/15', to: '2024/04/08' }, // 春季期間
+    { from: '2024/04/26', to: '2024/05/07' }, // ゴールデンウィーク
+    { from: '2024/07/12', to: '2024/09/02' }, // 夏季期間
+    { from: '2024/09/13', to: '2024/09/24' }, // 秋季期間
+    { from: '2024/10/12', to: '2024/10/14' }, // 特別期間（3連休）
+    { from: '2024/11/02', to: '2024/11/04' }, // 特別期間（3連休）
+    { from: '2024/12/20', to: '2025/01/14' }  // 年末年始
+];
             
             const rankPrice = {
                 "A": { "base": 1100, "additional": 550 },
