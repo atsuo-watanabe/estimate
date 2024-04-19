@@ -100,6 +100,59 @@
     <div id="estimate"></div>
     <button type="button" onclick="copyEstimate()" style="margin-top: 10px;">コピーする</button>
     <script>
+      let previousCheckInDateValue = "";
+let previousCheckOutDateValue = "";
+let previousCheckInTimeValue = "";
+let previousCheckOutTimeValue = "";
+let previousCatCountValue = "";
+let previousRoomTypeValue = "";
+let previousTransportationFeeValue = "";
+
+document.addEventListener('DOMContentLoaded', function() {
+    calculateEstimate();  // Call calculateEstimate to initialize the display
+    // Save initial input values
+    previousCheckInDateValue = document.getElementById("checkInDate").value;
+    previousCheckOutDateValue = document.getElementById("checkOutDate").value;
+    previousCheckInTimeValue = document.getElementById("checkInTime").value;
+    previousCheckOutTimeValue = document.getElementById("checkOutTime").value;
+    previousCatCountValue = document.getElementById("catCount").value;
+    previousRoomTypeValue = document.getElementById("roomType").value;
+    previousTransportationFeeValue = document.getElementById("transportationFee").value;
+});
+
+function handleInputChange(fieldId, previousValue) {
+    const currentValue = document.getElementById(fieldId).value;
+    if (currentValue !== previousValue) {
+        previousValue = currentValue;
+    }
+}
+
+// Add event listeners to input fields to handle changes
+document.getElementById("checkInDate").addEventListener("change", function() {
+    handleInputChange("checkInDate", previousCheckInDateValue);
+});
+document.getElementById("checkOutDate").addEventListener("change", function() {
+    handleInputChange("checkOutDate", previousCheckOutDateValue);
+});
+document.getElementById("checkInTime").addEventListener("change", function() {
+    handleInputChange("checkInTime", previousCheckInTimeValue);
+});
+document.getElementById("checkOutTime").addEventListener("change", function() {
+    handleInputChange("checkOutTime", previousCheckOutTimeValue);
+});
+document.getElementById("catCount").addEventListener("change", function() {
+    handleInputChange("catCount", previousCatCountValue);
+});
+document.getElementById("roomType").addEventListener("change", function() {
+    handleInputChange("roomType", previousRoomTypeValue);
+});
+document.getElementById("transportationFee").addEventListener("change", function() {
+    handleInputChange("transportationFee", previousTransportationFeeValue);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    calculateEstimate();  // Call calculateEstimate to initialize the display
+});
       document.addEventListener('DOMContentLoaded', function() {
     calculateEstimate();  // Call calculateEstimate to initialize the display
 });
@@ -187,7 +240,9 @@ checkOutTime.setMinutes(parseInt(outMinutes, 10));
 
     let estimateHTML = `**************************************<br>
         【チェックイン日】：${checkInDateValue}<br>
+        【チェックイン時間】：${checkInTimeValue}<br>
         【チェックアウト日】：${checkOutDateValue}<br>
+        【チェックアウト時間】：${checkOutTimeValue}<br>
         【ねこ頭数】：${catCount}匹<br>
         【お部屋のタイプ】：${selectedRoomType}<br><br>
         【お見積り料金】：${totalCost.toLocaleString()}円（税込み）<br><br>
