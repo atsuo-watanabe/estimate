@@ -124,6 +124,7 @@ function handleInputChange(fieldId, previousValue) {
     const currentValue = document.getElementById(fieldId).value;
     if (currentValue !== previousValue) {
         previousValue = currentValue;
+        calculateEstimate(); // 値が変更された場合に見積もりを再計算
     }
 }
 
