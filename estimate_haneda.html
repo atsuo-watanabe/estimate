@@ -194,7 +194,7 @@ checkOutTime.setMinutes(parseInt(outMinutes, 10));
         【料金明細】<br>${details}`;
 
     if (transportationFee) {
-        estimateHTML += `【追加料金】<br>・送迎代：${transportationFee.toLocaleString()}円<br>`;
+        estimateHTML += `・送迎代：${transportationFee.toLocaleString()}円<br>`;
     }
 
     document.getElementById("estimate").innerHTML = estimateHTML;
@@ -230,8 +230,8 @@ function displayCancellationPolicy(checkInDate, checkOutDate) {
     }
 
     const cancellationPolicy = isHighSeason ?
-        `◎キャンセル規定<br>シーズン期間となりますので、ご予約確定時よりキャンセル料が発生いたします。<br>・予約時点からお見積料金の50%<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100%<br>` :
-        `◎キャンセル規定<br>・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br>`;
+        `<br>◎キャンセル規定<br>シーズン期間となりますので、ご予約確定時よりキャンセル料が発生いたします。<br>・予約時点からお見積料金の50%<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100%<br>` :
+        `<br>◎キャンセル規定<br>・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br>`;
 
     document.getElementById("estimate").innerHTML += cancellationPolicy;
 }
