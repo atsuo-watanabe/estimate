@@ -61,174 +61,16 @@
           border-radius: 5px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
-  </style>
-       <script>
-        async function getRankDates() {
-            const sheetId = "1KfvWc2JyfNd9nn8hltn7rcCCVV2WLfcJPF8orf1rGw4";
-            const sheetName = "rankDates";
-            const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/1KfvWc2JyfNd9nn8hltn7rcCCVV2WLfcJPF8orf1rGw4/values/%E3%82%B7%E3%83%BC%E3%83%881?key=AIzaSyAcz2u3GPrFVEpGxW5ZxtOTMRbYHDebPxg`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            const values = data.values;
-            const rankDates = {};
+    </style>
+    </head>
 
-            // Convert values into object
-            if (values) {
-                for (let i = 1; i < values.length; i++) {
-                    const row = values[i];
-                    const date = moment(row[0]).format("YYYY-MM-DD");
-                    const rank = row[1];
-                    rankDates[date] = rank;
-                }
-            }
-
-            return rankDates;
-        }
-
-        async function calculateEstimate() {
-            const overtimeFee = document.getElementById("overtimeFee").value;
-            const transportationFee = document.getElementById("transportationFee").value;
-            const high_seasons = [
-    { from: '2023/12/22', to: '2024/01/09' }, // 年末年始
-    { from: '2024/02/10', to: '2024/02/12' }, // 特別期間（3連休）
-    { from: '2024/02/23', to: '2024/02/25' }, // 特別期間（3連休）
-    { from: '2024/03/15', to: '2024/04/08' }, // 春季期間
-    { from: '2024/04/26', to: '2024/05/07' }, // ゴールデンウィーク
-    { from: '2024/07/12', to: '2024/09/02' }, // 夏季期間
-    { from: '2024/09/13', to: '2024/09/24' }, // 秋季期間
-    { from: '2024/10/12', to: '2024/10/14' }, // 特別期間（3連休）
-    { from: '2024/11/02', to: '2024/11/04' }, // 特別期間（3連休）
-    { from: '2024/12/20', to: '2025/01/14' }  // 年末年始
-];
-            const rankPrice = {
-                "A": { "base": 3300, "additional": 2200 },
-                "B": { "base": 2200, "additional": 1100 },
-                "C": { "base": 1100, "additional": 550 },
-                "D": { "base": 0, "additional": 0 }
-            };
-
-            const roomType = {
-            "6畳部屋": { "base": 8800, "additional": 3300 },
-            "4畳部屋": { "base": 8800, "additional": 3300 },
-            "2畳部屋": { "base": 6600, "additional": 3300 },
-            "1畳部屋": { "base": 6600, "additional": 3300 }
-            };
-
-            const rankDates = await getRankDates();
-
-            const checkInDate = document.getElementById("checkInDate").value;
-            const checkOutDate = document.getElementById("checkOutDate").value;
-            const catCount = parseInt(document.getElementById("catCount").value);
-            const selectedRoomType = document.getElementById("roomType").value;
-
-            let currentDate = new Date(checkInDate);
-            const endDate = new Date(checkOutDate);
-            let totalCost = 0;
-            let details = "";
-
-            while (currentDate <= endDate) {
-                const dateString = currentDate.toISOString().split("T")[0];
-                const rank = rankDates[dateString];
-                const roomPrices = roomType[selectedRoomType];
-                const baseCost = roomPrices["base"] + rankPrice[rank]["base"];
-                const additionalCost = (catCount - 1) * (roomPrices["additional"] + rankPrice[rank]["additional"]);
-                const dailyCost = baseCost + additionalCost;
-                totalCost += dailyCost;
-
-                const formattedBaseCost = formatNumberWithCommas(baseCost);
-                const formattedAdditionalCost = formatNumberWithCommas(additionalCost);
-                const formattedDailyCost = formatNumberWithCommas(dailyCost);
-
-                const additionalCats = catCount - 1;
-                const additionalText = additionalCats > 0 ? `猫${additionalCats}匹追加${formattedAdditionalCost}円` : '猫追加無し0円';
-                details += `・${dateString.replace(/-/g, "/")}｜基本${formattedBaseCost}円＋${additionalText}＝${formattedDailyCost}円<br>`;
-                currentDate.setDate(currentDate.getDate() + 1);
-
-            }
-  
-            if (overtimeFee) {
-                totalCost += parseInt(overtimeFee);
-                const formattedOvertimeFee = formatNumberWithCommas(overtimeFee);
-                details += `・時間外手数料：${formattedOvertimeFee}円<br>`;
-              }
-
-              if (transportationFee) {
-                totalCost += parseInt(transportationFee);
-                const formattedTransportationFee = formatNumberWithCommas(transportationFee);
-                details += `・送迎代：${formattedTransportationFee}円<br>`;
-              }
-
-
-
-            estimate.innerHTML = `**************************************<br> ` +
-                                `【チェックイン日】   ：${checkInDate.replace(/-/g, "/")}<br>` +
-                                 `【チェックアウト日】 ：${checkOutDate.replace(/-/g, "/")}<br>` +
-                                 `【ねこ頭数】　　　     ：${catCount}匹<br>` +
-                                 `【お部屋のタイプ】　   ：${selectedRoomType}<br><br>` +
-                                 `【お見積り料金】　        ：${formatNumberWithCommas(totalCost)}円（税込み）<br><br>` +
-                                 `【料金明細】<br>${details}`;
-                                 `<br>
-【追加料金】<br>
-${overtimeFee ? `・時間外手数料：${formatNumberWithCommas(overtimeFee)}円<br>` : ""}
-${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee)}円<br>` : ""}`
-
-              function isDateInHighSeason(date, high_seasons) {
-                for (const season of high_seasons) {
-                  const fromDate = new Date(season.from);
-                  const toDate = new Date(season.to);
-                  if (date >= fromDate && date <= toDate) {
-                    return true;
-                  }
-                }
-                return false;
-              }
-
-              const checkIn = new Date(checkInDate);
-              const checkOut = new Date(checkOutDate);
-              let highSeasonDetected = false;
-
-              while (checkIn <= checkOut) {
-                if (isDateInHighSeason(checkIn, high_seasons)) {
-                  highSeasonDetected = true;
-                  break;
-                }
-                checkIn.setDate(checkIn.getDate() + 1);
-              }
-
-            if (highSeasonDetected ) {
-                estimate.innerHTML += `<br>※今回のお申し込み期間は特別時期（シーズン期間）が設定されていますので、キャンセル料はご予約時からお見積料金の50%となります。あらかじめご了承いただきますようお願い申し上げます。`;
-              }
-
-              if (highSeasonDetected == false) {
-                estimate.innerHTML += `<br>◎キャンセル規定<br>` +
-`・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>` +
-`・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>` +
-`・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br>`;
-              }
-
-        }
-
-        function formatNumberWithCommas(number) {
-            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-
-        function copyEstimate() {
-            const estimate = document.getElementById("estimate");
-            const textArea = document.createElement("textarea");
-            textArea.value = estimate.innerText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            alert("見積もりがクリップボードにコピーされました。");
-        }
-    </script>
-</head>
 <body>
     <h1>お見積もり</h1>
     <form>
-      <label>チェックイン日付：<input type="date" id="checkInDate" required></label><br>
-      <label>チェックアウト日付：<input type="date" id="checkOutDate" required></label><br>
+      <label>チェックイン日付：<input type="date" id="checkInDate" required></label>
+      <label>チェックイン時間：<input type="time" id="checkInTime"></label>
+      <label>チェックアウト日付：<input type="date" id="checkOutDate" required></label>
+      <label>チェックアウト時間：<input type="time" id="checkOutTime"></label>
       <label>猫の頭数：
         <select id="catCount" required>
             <option value="1">1</option>
@@ -242,37 +84,278 @@ ${transportationFee ? `・送迎代：${formatNumberWithCommas(transportationFee
             <option value="9">9</option>
             <option value="10">10</option>
         </select>
-      </label><br>
+      </label>
       <label>お部屋のタイプ：
         <select id="roomType" required>
-            <option value="6畳部屋">6畳部屋</option>
-            <option value="4畳部屋">4畳部屋</option>
-            <option value="2畳部屋">2畳部屋</option>
-            <option value="1畳部屋">1畳部屋</option>
+            <option value="6畳（窓あり）">6畳（窓あり）</option>
+            <option value="4畳（窓なし）">4畳（窓なし）</option>
+            <option value="2畳（窓あり）">2畳（窓あり）</option>
+            <option value="1畳（窓あり）">1畳（窓あり）</option>
+            <option value="3段ケージ">3段ケージ</option>
         </select>
-    </label><br>
-    <label>時間外手数料：<input type="number" id="overtimeFee"></label><br>
-<label>送迎代：<input type="number" id="transportationFee"></label><br>
-    <button type="button" onclick="calculateEstimate()">見積もりを計算</button>
-</form>
-<div id="estimate"></div>
-<button type="button" onclick="copyEstimate()" style="margin-top: 10px;">コピーする</button>
+      </label>
+      <label>送迎代：<input type="number" id="transportationFee"></label>
+      <button type="button" onclick="calculateEstimate()">見積もりを計算</button>
+    </form>
+    <div id="estimate"></div>
+    <button type="button" onclick="copyEstimate()" style="margin-top: 10px;">コピーする</button>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+    calculateEstimate();  // Call calculateEstimate to initialize the display
+});
 
-<script>
-  function formatNumberWithCommas(number) {
-      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
+      async function getRankDates() {
+          const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/1KfvWc2JyfNd9nn8hltn7rcCCVV2WLfcJPF8orf1rGw4/values/%E3%82%B7%E3%83%BC%E3%83%881?key=AIzaSyAcz2u3GPrFVEpGxW5ZxtOTMRbYHDebPxg`;
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          const values = data.values;
+          const rankDates = {};
 
-  function copyEstimate() {
-      const estimate = document.getElementById("estimate");
-      const textArea = document.createElement("textarea");
-      textArea.value = estimate.innerHTML.replace(/<br>/g, "\n");
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      alert("見積もりがクリップボードにコピーされました。");
-  }
-</script>
+          if (values) {
+              for (let i = 1; i < values.length; i++) {
+                  const row = values[i];
+                  const date = moment(row[0]).format("YYYY-MM-DD");
+                  const rank = row[1];
+                  rankDates[date] = rank;
+              }
+          }
+          return rankDates;
+      }
+
+      async function calculateEstimate() {
+    const rankPrice = {
+        "A": { "base": 3300, "additional": 2200 },
+        "B": { "base": 2200, "additional": 1100 },
+        "C": { "base": 1100, "additional": 550 },
+        "D": { "base": 0, "additional": 0 }
+    };
+
+    const checkInDateValue = document.getElementById("checkInDate").value;
+    const checkOutDateValue = document.getElementById("checkOutDate").value;
+    const checkInTimeValue = document.getElementById("checkInTime").value;
+const [hours, minutes] = checkInTimeValue.split(":");
+const checkInTime = new Date();
+checkInTime.setHours(parseInt(hours, 10));
+checkInTime.setMinutes(parseInt(minutes, 10));
+
+const checkOutTimeValue = document.getElementById("checkOutTime").value;
+const [outHours, outMinutes] = checkOutTimeValue.split(":");
+const checkOutTime = new Date();
+checkOutTime.setHours(parseInt(outHours, 10));
+checkOutTime.setMinutes(parseInt(outMinutes, 10));
+    const rankDates = await getRankDates();
+
+
+    const overtimeCharges = calculateOvertimeCharges(checkInTime, checkOutTime);
+
+
+    const catCount = parseInt(document.getElementById("catCount").value, 10);
+    const selectedRoomType = document.getElementById("roomType").value;
+    const roomType = {
+        "6畳（窓あり）": { "base": 8800, "additional": 3300 },
+        "4畳（窓なし）": { "base": 6600, "additional": 3300 },
+        "2畳（窓あり）": { "base": 6600, "additional": 3300 },
+        "1畳（窓あり）": { "base": 6600, "additional": 3300 },
+        "3段ケージ": { "base": 5500, "additional": 3300 }
+    };
+
+    let currentDate = new Date(checkInDateValue);
+    const endDate = new Date(checkOutDateValue);
+    let totalCost = 0;
+    let details = "";
+
+    while (currentDate <= endDate) {
+        const dateString = currentDate.toISOString().split("T")[0];
+        const rank = rankDates[dateString] || "D";
+        const roomPrices = roomType[selectedRoomType];
+        const baseCost = roomPrices.base + (rankPrice[rank].base || 0);
+        const additionalCost = (catCount - 1) * (roomPrices.additional + (rankPrice[rank].additional || 0));
+        const dailyCost = baseCost + additionalCost;
+        totalCost += dailyCost;
+        details += `・${dateString}：基本${baseCost.toLocaleString()}円＋追加${additionalCost.toLocaleString()}円＝${dailyCost.toLocaleString()}円<br>`;
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    totalCost += overtimeCharges.total;
+    details += overtimeCharges.details;
+
+    let transportationFee = parseInt(document.getElementById("transportationFee").value);
+    if (isNaN(transportationFee)) {
+        transportationFee = 0;
+    }
+    totalCost += transportationFee;
+
+    let estimateHTML = `**************************************<br>
+        【チェックイン日】：${checkInDateValue}<br>
+        【チェックアウト日】：${checkOutDateValue}<br>
+        【ねこ頭数】：${catCount}匹<br>
+        【お部屋のタイプ】：${selectedRoomType}<br><br>
+        【お見積り料金】：${totalCost.toLocaleString()}円（税込み）<br><br>
+        【料金明細】<br>${details}`;
+
+    if (transportationFee) {
+        estimateHTML += `【追加料金】<br>・送迎代：${transportationFee.toLocaleString()}円<br>`;
+    }
+
+    document.getElementById("estimate").innerHTML = estimateHTML;
+
+    // Append cancellation policy
+    displayCancellationPolicy(checkInDateValue, checkOutDateValue);
+}
+
+function displayCancellationPolicy(checkInDate, checkOutDate) {
+    const high_seasons = [
+        { from: '2023-12-22', to: '2024-01-09' },
+        { from: '2024-02-10', to: '2024-02-12' },
+        { from: '2024-02-23', to: '2024-02-25' },
+        { from: '2024-03-15', to: '2024-04-08' },
+        { from: '2024-04-26', to: '2024-05-07' },
+        { from: '2024-07-12', to: '2024-09-02' },
+        { from: '2024-09-13', to: '2024-09-24' },
+        { from: '2024-10-12', to: '2024-10-14' },
+        { from: '2024-11-02', to: '2024-11-04' },
+        { from: '2024-12-20', to: '2025-01-14' }
+    ];
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+    let isHighSeason = false;
+
+    for (let season of high_seasons) {
+        const start = new Date(season.from);
+        const end = new Date(season.to);
+        if ((checkIn >= start && checkIn <= end) || (checkOut >= start && checkOut <= end)) {
+            isHighSeason = true;
+            break;
+        }
+    }
+
+    const cancellationPolicy = isHighSeason ?
+        `◎キャンセル規定<br>シーズン期間となりますので、ご予約確定時よりキャンセル料が発生いたします。<br>・予約時点からお見積料金の50%<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100%<br>` :
+        `◎キャンセル規定<br>・ご利用開始日の1ヶ月前から8日前までにお申し出のキャンセルはお見積料金の20％<br>・ご利用開始日の7日前から前日までにお申し出のキャンセルはお見積料金の50％<br>・当日、お申し出のキャンセルもしくは連絡なしの場合はお見積料金の100％<br>`;
+
+    document.getElementById("estimate").innerHTML += cancellationPolicy;
+}
+
+
+   function calculateOvertimeCharges(checkInTime, checkOutTime) {
+    let total = 0;
+    let details = "";
+    const halfHour = 30 * 60 * 1000; // 半時間のミリ秒数
+
+    // チェックイン時間外の料金を計算
+    if (checkInTime) {
+        const checkInHour = checkInTime.getHours();
+        const checkInMinute = checkInTime.getMinutes();
+        const checkInTimeFormatted = `${checkInHour}:${checkInMinute < 10 ? '0' : ''}${checkInMinute}`;
+
+        if (checkInHour === 8 && checkInMinute >= 30) {
+            total += 1100;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：1,100円<br>`;
+        } else if (checkInHour === 8 && checkInMinute < 30) {
+            total += 2200;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：2,200円<br>`;
+        } else if (checkInHour === 7 && checkInMinute >= 30) {
+            total += 3300;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：3,300円<br>`;
+        } else if (checkInHour === 7 && checkInMinute < 30) {
+            total += 4400;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：4,400円<br>`;
+        } else if (checkInHour === 6 && checkInMinute >= 30) {
+            total += 7700;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：7,700円<br>`;
+        } else if (checkInHour === 6 && checkInMinute < 30) {
+            total += 11000;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：11,000円<br>`;
+        } else if (checkInHour === 20 && checkInMinute >= 1 && checkInMinute <= 30) {
+            total += 1100;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：1,100円<br>`;
+        } else if (checkInHour === 20 && checkInMinute >= 31 && checkInMinute <= 59) {
+            total += 2200;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：2,200円<br>`;
+        } else if (checkInHour === 21 && checkInMinute >= 1 && checkInMinute <= 30) {
+            total += 3300;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：3,300円<br>`;
+        } else if (checkInHour === 21 && checkInMinute >= 31 && checkInMinute <= 59) {
+            total += 4400;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：4,400円<br>`;
+        } else if (checkInHour === 22 && checkInMinute >= 1 && checkInMinute <= 30) {
+            total += 7700;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：7,700円<br>`;
+        } else if (checkInHour === 22 && checkInMinute >= 31 && checkInMinute <= 59) {
+            total += 11000;
+            details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：11,000円<br>`;
+        }
+    }
+
+    // チェックアウト時間外の料金を計算
+    if (checkOutTime) {
+        const checkOutHour = checkOutTime.getHours();
+        const checkOutMinute = checkOutTime.getMinutes();
+        const checkOutTimeFormatted = `${checkOutHour}:${checkOutMinute < 10 ? '0' : ''}${checkOutMinute}`;
+
+        if (checkOutHour === 8 && checkOutMinute >= 30) {
+            total += 1100;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：1,100円<br>`;
+        } else if (checkOutHour === 8 && checkOutMinute < 30) {
+            total += 2200;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：2,200円<br>`;
+        } else if (checkOutHour === 7 && checkOutMinute >= 30) {
+            total += 3300;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：3,300円<br>`;
+        } else if (checkOutHour === 7 && checkOutMinute < 30) {
+            total += 4400;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：4,400円<br>`;
+        } else if (checkOutHour === 6 && checkOutMinute >= 30) {
+            total += 7700;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：7,700円<br>`;
+        } else if (checkOutHour === 6 && checkOutMinute < 30) {
+            total += 11000;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：11,000円<br>`;
+        } else if (checkOutHour === 20 && checkOutMinute >= 1 && checkOutMinute <= 30) {
+            total += 1100;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：1,100円<br>`;
+        } else if (checkOutHour === 20 && checkOutMinute >= 31 && checkOutMinute <= 59) {
+            total += 2200;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：2,200円<br>`;
+        } else if (checkOutHour === 21 && checkOutMinute >= 1 && checkOutMinute <= 30) {
+            total += 3300;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：3,300円<br>`;
+        } else if (checkOutHour === 21 && checkOutMinute >= 31 && checkOutMinute <= 59) {
+            total += 4400;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：4,400円<br>`;
+        } else if (checkOutHour === 22 && checkOutMinute >= 1 && checkOutMinute <= 30) {
+            total += 7700;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：7,700円<br>`;
+        } else if (checkOutHour === 22 && checkOutMinute >= 31 && checkOutMinute <= 59) {
+            total += 11000;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：11,000円<br>`;
+        } else if (checkOutHour === 6 && checkOutMinute >= 0 && checkOutMinute <= 29) {
+            total += 11000;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：11,000円<br>`;
+        } else if (checkOutHour === 22 && checkOutMinute >= 31 && checkOutMinute <= 59) {
+            total += 11000;
+            details += `・チェックアウト時間外手数料（${checkOutTimeFormatted}）：11,000円<br>`;
+        }
+    }
+
+    return { total, details };
+}
+
+
+    function formatNumberWithCommas(number) {
+        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function copyEstimate() {
+        const estimate = document.getElementById("estimate");
+        const textArea = document.createElement("textarea");
+        textArea.value = estimate.innerText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        alert("見積もりがクリップボードにコピーされました。");
+    }
+    </script>
 </body>
 </html>
