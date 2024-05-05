@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       async function calculateEstimate() {
     const rankPrice = {
+        "S": { "base": 5500, "additional": 3300 },
         "A": { "base": 3300, "additional": 2200 },
         "B": { "base": 2200, "additional": 1100 },
         "C": { "base": 1100, "additional": 550 },
@@ -206,7 +207,7 @@ checkOutTime.setMinutes(parseInt(outMinutes, 10));
     const catCount = parseInt(document.getElementById("catCount").value, 10);
     const selectedRoomType = document.getElementById("roomType").value;
     const roomType = {
-        "6畳（窓あり）": { "base": 8800, "additional": 3300 },
+        "6畳（窓あり）": { "base": 9900, "additional": 3300 },
         "4畳（窓なし）": { "base": 6600, "additional": 3300 },
         "2畳（窓あり）": { "base": 6600, "additional": 3300 },
         "1畳（窓あり）": { "base": 6600, "additional": 3300 },
