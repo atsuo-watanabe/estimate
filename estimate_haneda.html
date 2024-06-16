@@ -325,19 +325,19 @@ function displayCancellationPolicy(checkInDate, checkOutDate) {
         } else if (checkInHour === 6 && checkInMinute <= 30) {
             total += 11000;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：11,000円<br>`;
-        } else if (checkInHour === 20 && checkInMinute <= 30) {
+        } else if (checkInHour === 20 && checkInMinute >= 1 && checkInMinute <= 30) {
             total += 1100;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：1,100円<br>`;
         } else if (checkInHour === 20 && checkInMinute >= 31 ) {
             total += 2200;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：2,200円<br>`;
-        } else if (checkInHour === 21 && checkInMinute <= 30) {
+        } else if (checkInHour === 21 && checkInMinute >= 1 && checkInMinute <= 30) {
             total += 3300;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：3,300円<br>`;
         } else if (checkInHour === 21 && checkInMinute >= 31 ) {
             total += 4400;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：4,400円<br>`;
-        } else if (checkInHour === 22 && checkInMinute <= 30) {
+        } else if (checkInHour === 22 checkInMinute >= 1 && checkInMinute <= 30) {
             total += 7700;
             details += `・チェックイン時間外手数料（${checkInTimeFormatted}）：7,700円<br>`;
         } else if (checkInHour === 22 && checkInMinute >= 31 ) {
