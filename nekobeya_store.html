@@ -185,7 +185,6 @@
             margin-top: 2px;
         }
         
-        /* 読み込み中の点滅 */
         .blink { animation: blinker 1s linear infinite; color: #999; font-weight: normal; font-size: 12px; }
         @keyframes blinker { 50% { opacity: 0.5; } }
 
@@ -205,7 +204,7 @@
         .pac-container { z-index: 1000; border-radius: 8px; margin-top: 2px; }
     </style>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCH7MD4Jj8pKU9hDSJUYqBgq8fQsMWWDjE&libraries=places"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCH7MD4Jj8pKU9hDSJUYqBgq8fQsMWWDjE&libraries=places&language=ja&region=JP"></script>
 </head>
 <body>
 
@@ -246,7 +245,7 @@
 
     let distanceMatrixService;
     let directionsService;
-    let selectedLocation = null;
+    let selectedAddress = ""; // 住所の「文字」を保持
 
     function initMap() {
         const input = document.getElementById("user-address");
@@ -260,10 +259,11 @@
 
         autocomplete.addListener('place_changed', function() {
             const place = autocomplete.getPlace();
-            if (place.geometry) {
-                selectedLocation = place.geometry.location;
+            if (place.formatted_address) {
+                // ここが重要：座標オブジェクトではなく、住所の「文字列」を保存する
+                selectedAddress = place.formatted_address; 
             } else {
-                selectedLocation = null;
+                selectedAddress = input.value;
             }
         });
     }
@@ -271,13 +271,14 @@
     window.onload = initMap;
 
     async function searchStores() {
-        const userAddress = document.getElementById("user-address").value;
-        if (!userAddress) {
+        const inputVal = document.getElementById("user-address").value;
+        if (!inputVal) {
             alert("住所を入力してください。");
             return;
         }
 
-        const origin = selectedLocation || userAddress;
+        // 候補を選んでいない場合もあるので、入力値を優先で使う場合も考慮
+        const origin = selectedAddress || inputVal;
 
         document.querySelector('.search-btn').disabled = true;
         document.getElementById('loader').style.display = 'block';
@@ -285,11 +286,10 @@
         document.getElementById('cards-container').innerHTML = '';
 
         try {
-            // 1. まずは「車」の時間だけ一括取得（これは速くて正確）
+            // 1. 車の時間（一括計算）
             const destinations = STORES.map(store => store.address);
             const drivingMatrix = await getDistanceMatrix(origin, destinations);
 
-            // 2. データを結合
             let calculatedStores = STORES.map((store, index) => {
                 const el = drivingMatrix.rows[0].elements[index] || { status: 'ERROR' };
                 const driveVal = (el.status === 'OK') ? el.duration.value : 9999999;
@@ -302,14 +302,12 @@
                         value: driveVal,
                         distText: (el.status === 'OK') ? el.distance.text : '-'
                     },
-                    transit: { text: '<span class="blink">計算中...</span>', distText: '-' } // 初期状態
+                    transit: { text: '<span class="blink">計算中...</span>', distText: '-' }
                 };
             });
 
-            // 3. 車が近い順に並び替え
             calculatedStores.sort((a, b) => a.driving.value - b.driving.value);
 
-            // 4. TOP5 + 羽田 を抽出
             let displayList = calculatedStores.slice(0, 5);
             const hasHaneda = displayList.some(s => s.id === 'haneda');
             if (!hasHaneda) {
@@ -317,108 +315,13 @@
                 if (hanedaObj) displayList.push(hanedaObj);
             }
 
-            // 5. 先にカードを表示してしまう
             renderCards(displayList);
             document.getElementById('results-area').style.display = 'block';
 
-            // 6. 表示された店舗の「公共交通機関」を1つずつ正確に取得する
-            // Directions APIを使用（DistanceMatrixより遥かに賢い）
+            // 2. 公共交通機関（個別計算）
+            // Address String（住所の文字）を渡すことで、Googleに柔軟に駅を探させる
             for (const store of displayList) {
                 await updateTransitInfo(origin, store);
             }
 
-        } catch (error) {
-            console.error(error);
-            alert("検索エラーが発生しました。");
-        } finally {
-            document.querySelector('.search-btn').disabled = false;
-            document.getElementById('loader').style.display = 'none';
-        }
-    }
-
-    // 車の一括計算（Matrix使用）
-    function getDistanceMatrix(origin, destinations) {
-        return new Promise((resolve) => {
-            distanceMatrixService.getDistanceMatrix({
-                origins: [origin],
-                destinations: destinations,
-                travelMode: 'DRIVING',
-                unitSystem: google.maps.UnitSystem.METRIC,
-            }, (response, status) => {
-                if (status === 'OK') resolve(response);
-                else resolve({ rows: [{ elements: [] }] });
-            });
-        });
-    }
-
-    // 公共交通機関の個別計算（Directions API使用：これが高精度！）
-    function updateTransitInfo(origin, store) {
-        return new Promise((resolve) => {
-            const request = {
-                origin: origin,
-                destination: store.address,
-                travelMode: 'TRANSIT',
-                provideRouteAlternatives: false,
-                // 時間指定なし＝「現在時刻」で最短ルートを探す
-            };
-
-            directionsService.route(request, (result, status) => {
-                // DOM要素を取得して更新
-                const timeEl = document.getElementById(`transit-time-${store.id}`);
-                const distEl = document.getElementById(`transit-dist-${store.id}`);
-
-                if (status === 'OK' && result.routes.length > 0) {
-                    const leg = result.routes[0].legs[0];
-                    if (timeEl) timeEl.innerHTML = leg.duration.text;
-                    if (distEl) distEl.innerHTML = leg.distance.text;
-                } else {
-                    if (timeEl) timeEl.innerHTML = '<span style="font-size:11px;color:#aaa">ルート不可</span>';
-                    if (distEl) distEl.innerHTML = '-';
-                    // 原因調査用ログ
-                    console.log(`Transit fail for ${store.name}: ${status}`);
-                }
-                resolve(); // 失敗しても次へ進む
-            });
-        });
-    }
-
-    function renderCards(stores) {
-        const container = document.getElementById('cards-container');
-        
-        stores.forEach((store, index) => {
-            const isHaneda = (store.id === 'haneda');
-            const isClosest = (index === 0);
-
-            const card = document.createElement('div');
-            card.className = `store-card ${isHaneda ? 'highlight' : ''}`;
-            
-            let badgesHtml = '<div class="badges">';
-            if (isClosest) badgesHtml += `<span class="badge badge-closest">最短</span>`;
-            if (isHaneda) badgesHtml += `<span class="badge badge-haneda">羽田空港店</span>`;
-            badgesHtml += '</div>';
-
-            card.innerHTML = `
-                ${badgesHtml}
-                <div class="store-name">${store.name}</div>
-                <span class="store-address">${store.address}</span>
-                
-                <div class="routes-grid">
-                    <div class="route-info">
-                        <div class="route-header">🚗 車</div>
-                        <div class="route-time">${store.driving.text}</div>
-                        <div class="route-dist">${store.driving.distText}</div>
-                    </div>
-                    <div class="route-info">
-                        <div class="route-header">🚃 公共交通 (現在)</div>
-                        <div class="route-time" id="transit-time-${store.id}">${store.transit.text}</div>
-                        <div class="route-dist" id="transit-dist-${store.id}">${store.transit.distText}</div>
-                    </div>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-</script>
-
-</body>
-</html>
+        } catch (error)
