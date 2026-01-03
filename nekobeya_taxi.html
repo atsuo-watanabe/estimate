@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ペットタクシー料金計算（日時指定版）</title>
+    <title>ペットタクシー料金計算</title>
     <style>
         :root {
             --primary-color: #FF8C00;
@@ -23,6 +23,7 @@
             margin: 0;
             padding: 20px 15px;
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
@@ -72,12 +73,12 @@
         }
 
         .form-group { margin-bottom: 20px; }
-        label { font-weight: 600; display: block; margin-bottom: 8px; color: #555; font-size: 14px; }
+        label { font-weight: 700; display: block; margin-bottom: 8px; color: #444; font-size: 14px; }
 
-        /* 入力フィールドの共通スタイル */
-        select, input[type="text"], input[type="number"], input[type="datetime-local"] {
+        /* 入力フィールド共通 */
+        select, input[type="text"], input[type="number"] {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             border: 2px solid #eee;
             border-radius: 12px;
             box-sizing: border-box;
@@ -92,6 +93,50 @@
             border-color: var(--primary-color);
             background-color: #fff;
         }
+
+        /* --- 日時入力のUI --- */
+        .datetime-container {
+            background: #fafafa;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 5px 15px; /* 上下のパディングを調整 */
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .datetime-container:focus-within {
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+        
+        /* 10分単位にするため step="600" を設定 */
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 10px 0;
+            font-size: 18px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            color: #333;
+            outline: none;
+        }
+        
+        /* 入力クリアボタン */
+        .clear-btn {
+            background: #eee;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-block;
+            transition: 0.2s;
+        }
+        .clear-btn:hover { background: #ddd; }
+
 
         /* 経由地エリア */
         .waypoint-item {
@@ -131,7 +176,7 @@
             color: var(--primary-color);
         }
 
-        /* チェックボックス共通スタイル */
+        /* チェックボックス */
         .checkbox-wrapper {
             display: flex;
             align-items: center;
@@ -173,12 +218,8 @@
             background-color: #f0f4c3;
             border-color: #dce775;
         }
-        .checkbox-avoid label {
-            color: #558b2f;
-        }
-        .checkbox-avoid input {
-            accent-color: #7cb342;
-        }
+        .checkbox-avoid label { color: #558b2f; }
+        .checkbox-avoid input { accent-color: #7cb342; }
 
         button.calc-btn {
             width: 100%;
@@ -246,7 +287,7 @@
             from { opacity: 0; transform: translateY(-5px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
+        
         .pac-container {
             border-radius: 0 0 10px 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -290,14 +331,18 @@
         <button type="button" class="add-waypoint-btn" onclick="addWaypoint()">＋ 経由地を追加する</button>
 
         <div class="form-group">
-            <label for="destination">お客様住所 (目的地)</label>
+            <label for="destination">お客様住所</label>
             <input type="text" id="destination" placeholder="住所または施設名を入力">
         </div>
 
         <div class="form-group">
             <label for="dept-time">出発日時 (任意)</label>
-            <input type="datetime-local" id="dept-time">
-            <p style="font-size:12px; color:#666; margin-top:5px;">※日時を指定すると渋滞予測を考慮した時間を表示します。</p>
+            <div class="datetime-container">
+                <input type="datetime-local" id="dept-time" step="600">
+            </div>
+            
+            <button type="button" class="clear-btn" onclick="clearDate()">入力クリア (現在時刻に戻す)</button>
+            <p style="font-size:12px; color:#666; margin-top:5px;">※日時を指定すると、その時間の渋滞予測を考慮します。</p>
         </div>
     </div>
 
@@ -450,6 +495,10 @@
         }
     }
 
+    function clearDate() {
+        document.getElementById('dept-time').value = '';
+    }
+
     function startCalculation() {
         if (currentMode === 'map') {
             calculateByMap();
@@ -474,7 +523,7 @@
 
         const destination = document.getElementById("destination").value;
         const avoidTolls = document.getElementById("avoid-tolls").checked;
-        const timeInput = document.getElementById("dept-time").value; // 日時入力値
+        const timeInput = document.getElementById("dept-time").value;
         
         const waypointInputs = document.querySelectorAll('.waypoint-input');
         const waypoints = [];
@@ -492,7 +541,6 @@
             return;
         }
 
-        // リクエストオブジェクト作成
         const request = {
             origin: origin,
             destination: destination,
@@ -503,20 +551,17 @@
             unitSystem: google.maps.UnitSystem.METRIC
         };
 
-        // ★日時指定がある場合の処理
         let isPredicted = false;
         if (timeInput) {
             const departureDate = new Date(timeInput);
             const now = new Date();
             
-            // 過去の日時はエラーになる可能性があるため、少し余裕を見て判定
             if (departureDate < now) {
-                // 過去の場合は何もしない（現在時刻で計算）
-                // 厳密にしたい場合は alert("未来の日時を指定してください"); return; でも可
+                // 過去の場合は無視
             } else {
                 request.drivingOptions = {
                     departureTime: departureDate,
-                    trafficModel: 'best_guess' // 渋滞予測モデル
+                    trafficModel: 'bestguess'
                 };
                 isPredicted = true;
             }
@@ -533,7 +578,6 @@
                 
                 legs.forEach(leg => {
                     totalDistanceMeters += leg.distance.value;
-                    // ★渋滞予測時間があればそちら(duration_in_traffic)を使用、なければ通常時間(duration)
                     if (leg.duration_in_traffic) {
                         totalDurationSeconds += leg.duration_in_traffic.value;
                     } else {
@@ -550,10 +594,9 @@
                 if (hours > 0) durationText += hours + "時間 ";
                 durationText += minutes + "分";
 
-                // 予測かどうかのラベル更新
                 const timeNote = document.getElementById("time-note");
                 if (isPredicted) {
-                    timeNote.innerText = "(渋滞予測含む)";
+                    timeNote.innerText = "(渋滞予測)";
                     timeNote.style.color = "#d32f2f";
                 } else {
                     timeNote.innerText = "";
