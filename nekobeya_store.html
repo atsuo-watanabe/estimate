@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>最寄り店舗検索（高精度版）</title>
+    <title>最寄り店舗検索</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -143,50 +143,52 @@
             display: block;
         }
 
-        .routes-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .route-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             border-top: 1px solid #eee;
             padding-top: 12px;
+            margin-top: 10px;
         }
 
-        .route-info {
+        .car-info {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 13px;
-            position: relative;
+            align-items: baseline;
+            gap: 8px;
         }
-        .route-info:first-child::after {
-            content: "";
-            position: absolute;
-            right: -5px;
-            top: 10%;
-            height: 80%;
-            width: 1px;
-            background: #eee;
-        }
-        
+
         .route-header {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
         }
+
         .route-time { 
             font-weight: 800; 
-            font-size: 18px; 
+            font-size: 20px; 
             color: var(--primary-dark); 
-            line-height: 1.2;
+            line-height: 1;
         }
         .route-dist { 
-            font-size: 11px; 
-            color: #666; 
-            margin-top: 2px;
+            font-size: 12px; 
+            color: #888; 
+            margin-left: 5px;
         }
         
-        .blink { animation: blinker 1s linear infinite; color: #999; font-weight: normal; font-size: 12px; }
-        @keyframes blinker { 50% { opacity: 0.5; } }
+        /* Googleマップボタン */
+        .map-link-btn {
+            display: inline-block;
+            font-size: 12px;
+            color: #1a73e8;
+            text-decoration: none;
+            background: #f1f3f4;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .map-link-btn:hover { background: #e8f0fe; }
 
         .loader {
             border: 3px solid #f3f3f3;
@@ -244,8 +246,7 @@
     ];
 
     let distanceMatrixService;
-    let directionsService;
-    let selectedAddress = ""; // 住所の「文字」を保持
+    let selectedAddressStr = "";
 
     function initMap() {
         const input = document.getElementById("user-address");
@@ -255,15 +256,13 @@
         };
         const autocomplete = new google.maps.places.Autocomplete(input, options);
         distanceMatrixService = new google.maps.DistanceMatrixService();
-        directionsService = new google.maps.DirectionsService();
 
         autocomplete.addListener('place_changed', function() {
             const place = autocomplete.getPlace();
             if (place.formatted_address) {
-                // ここが重要：座標オブジェクトではなく、住所の「文字列」を保存する
-                selectedAddress = place.formatted_address; 
+                selectedAddressStr = place.formatted_address; 
             } else {
-                selectedAddress = input.value;
+                selectedAddressStr = input.value;
             }
         });
     }
@@ -277,8 +276,7 @@
             return;
         }
 
-        // 候補を選んでいない場合もあるので、入力値を優先で使う場合も考慮
-        const origin = selectedAddress || inputVal;
+        const origin = selectedAddressStr || inputVal;
 
         document.querySelector('.search-btn').disabled = true;
         document.getElementById('loader').style.display = 'block';
@@ -286,7 +284,7 @@
         document.getElementById('cards-container').innerHTML = '';
 
         try {
-            // 1. 車の時間（一括計算）
+            // 車の時間だけ計算
             const destinations = STORES.map(store => store.address);
             const drivingMatrix = await getDistanceMatrix(origin, destinations);
 
@@ -301,13 +299,14 @@
                         text: (el.status === 'OK') ? el.duration.text : '--',
                         value: driveVal,
                         distText: (el.status === 'OK') ? el.distance.text : '-'
-                    },
-                    transit: { text: '<span class="blink">計算中...</span>', distText: '-' }
+                    }
                 };
             });
 
+            // 近い順にソート
             calculatedStores.sort((a, b) => a.driving.value - b.driving.value);
 
+            // TOP5 ＋ 羽田必須ロジック
             let displayList = calculatedStores.slice(0, 5);
             const hasHaneda = displayList.some(s => s.id === 'haneda');
             if (!hasHaneda) {
@@ -315,13 +314,70 @@
                 if (hanedaObj) displayList.push(hanedaObj);
             }
 
-            renderCards(displayList);
+            renderCards(displayList, origin);
             document.getElementById('results-area').style.display = 'block';
 
-            // 2. 公共交通機関（個別計算）
-            // Address String（住所の文字）を渡すことで、Googleに柔軟に駅を探させる
-            for (const store of displayList) {
-                await updateTransitInfo(origin, store);
-            }
+        } catch (error) {
+            console.error(error);
+            alert("検索エラーが発生しました。");
+        } finally {
+            document.querySelector('.search-btn').disabled = false;
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
 
-        } catch (error)
+    function getDistanceMatrix(origin, destinations) {
+        return new Promise((resolve) => {
+            distanceMatrixService.getDistanceMatrix({
+                origins: [origin],
+                destinations: destinations,
+                travelMode: 'DRIVING',
+                unitSystem: google.maps.UnitSystem.METRIC,
+            }, (response, status) => {
+                if (status === 'OK') resolve(response);
+                else resolve({ rows: [{ elements: [] }] });
+            });
+        });
+    }
+
+    function renderCards(stores, originAddress) {
+        const container = document.getElementById('cards-container');
+        
+        stores.forEach((store, index) => {
+            const isHaneda = (store.id === 'haneda');
+            const isClosest = (index === 0);
+
+            const card = document.createElement('div');
+            card.className = `store-card ${isHaneda ? 'highlight' : ''}`;
+            
+            let badgesHtml = '<div class="badges">';
+            if (isClosest) badgesHtml += `<span class="badge badge-closest">最短</span>`;
+            if (isHaneda) badgesHtml += `<span class="badge badge-haneda">羽田空港店</span>`;
+            badgesHtml += '</div>';
+
+            // ★修正：Googleマップへのリンクを「公共交通機関(transit)」に変更
+            const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originAddress)}&destination=${encodeURIComponent(store.address)}&travelmode=transit`;
+
+            card.innerHTML = `
+                ${badgesHtml}
+                <div class="store-name">${store.name}</div>
+                <span class="store-address">${store.address}</span>
+                
+                <div class="route-info-row">
+                    <div class="car-info">
+                        <span class="route-header">🚗 車</span>
+                        <span class="route-time">${store.driving.text}</span>
+                        <span class="route-dist">(${store.driving.distText})</span>
+                    </div>
+                    <a href="${mapUrl}" target="_blank" class="map-link-btn">
+                        電車・バスで見る ↗
+                    </a>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+</script>
+
+</body>
+</html>
