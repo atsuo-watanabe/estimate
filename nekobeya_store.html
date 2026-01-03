@@ -227,7 +227,7 @@
 </div>
 
 <script>
-    // 店舗リスト：全10店舗
+    // 店舗リスト（全11店舗）
     const STORES = [
         { id: 'minato', name: 'ねこべや港区本店', address: '東京都港区芝3丁目13-5' },
         { id: 'haneda', name: 'ねこべや羽田空港店', address: '東京都大田区羽田1-8-4' }, // ※必須表示
@@ -238,7 +238,10 @@
         { id: 'ebina', name: 'ねこべや海老名店', address: '神奈川県海老名市大谷北3-18-3' },
         { id: 'koshigaya', name: 'ねこべや越谷店', address: '埼玉県越谷市御殿町4-54' },
         { id: 'matsudo', name: 'ねこべや松戸店', address: '千葉県松戸市南花島4-61-37' },
-        { id: 'omiya', name: 'ねこべや大宮店', address: '埼玉県さいたま市大宮区堀の内町3丁目310' }
+        { id: 'omiya', name: 'ねこべや埼玉大宮店', address: '埼玉県さいたま市大宮区堀の内町3丁目310' },
+        
+        // ★追加店舗
+        { id: 'shonan', name: 'ねこべや湘南藤沢店', address: '神奈川県藤沢市辻堂4丁目11-17 小林ビル2F' }
     ];
 
     let distanceMatrixService;
@@ -272,40 +275,49 @@
         try {
             const destinations = STORES.map(store => store.address);
 
-            // 車(DRIVING)と電車(TRANSIT)で計算
+            // APIリクエスト（現在時刻を基準に検索）
             const drivingPromise = getDistanceMatrix(userAddress, destinations, 'DRIVING');
             const transitPromise = getDistanceMatrix(userAddress, destinations, 'TRANSIT');
 
             const [drivingResults, transitResults] = await Promise.all([drivingPromise, transitPromise]);
 
             let calculatedStores = STORES.map((store, index) => {
-                const dEl = drivingResults.rows[0].elements[index] || {};
-                const tEl = transitResults.rows[0].elements[index] || {};
+                // 安全にデータを取り出す
+                const dRow = drivingResults.rows ? drivingResults.rows[0] : null;
+                const tRow = transitResults.rows ? transitResults.rows[0] : null;
+                
+                const dEl = dRow ? dRow.elements[index] : { status: 'ERROR' };
+                const tEl = tRow ? tRow.elements[index] : { status: 'ERROR' };
+
+                // 表示用テキストの生成（エラー時の理由を表示）
+                const dText = (dEl.status === 'OK') ? dEl.duration.text : getStatusLabel(dEl.status);
+                const tText = (tEl.status === 'OK') ? tEl.duration.text : getStatusLabel(tEl.status);
+
+                // ソート用の値（エラー時は後ろに回す）
+                const dValue = (dEl.status === 'OK') ? dEl.duration.value : 9999999;
 
                 return {
                     ...store,
                     driving: {
                         status: dEl.status,
-                        text: (dEl.duration && dEl.status === 'OK') ? dEl.duration.text : '--',
-                        value: (dEl.duration && dEl.status === 'OK') ? dEl.duration.value : 9999999, // ソート用(秒)
-                        distText: (dEl.distance && dEl.status === 'OK') ? dEl.distance.text : '-'
+                        text: dText,
+                        value: dValue,
+                        distText: (dEl.status === 'OK') ? dEl.distance.text : '-'
                     },
                     transit: {
                         status: tEl.status,
-                        text: (tEl.duration && tEl.status === 'OK') ? tEl.duration.text : '--',
-                        distText: (tEl.distance && tEl.status === 'OK') ? tEl.distance.text : '-'
+                        text: tText,
+                        distText: (tEl.status === 'OK') ? tEl.distance.text : '-'
                     }
                 };
             });
 
-            // 車の所要時間順にソート（近い順）
+            // 近い順にソート
             calculatedStores.sort((a, b) => a.driving.value - b.driving.value);
 
-            // TOP5の抽出
+            // TOP5抽出
             let displayList = calculatedStores.slice(0, 5);
             const hasHaneda = displayList.some(s => s.id === 'haneda');
-            
-            // 羽田がTOP5にいなければ強制追加
             if (!hasHaneda) {
                 const hanedaObj = calculatedStores.find(s => s.id === 'haneda');
                 if (hanedaObj) displayList.push(hanedaObj);
@@ -316,10 +328,20 @@
 
         } catch (error) {
             console.error(error);
-            alert("検索に失敗しました。APIキーや通信状況を確認してください。");
+            alert("検索に失敗しました。住所や通信状況を確認してください。");
         } finally {
             document.querySelector('.search-btn').disabled = false;
             document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    // ステータスコードを日本語に変換する関数
+    function getStatusLabel(status) {
+        switch (status) {
+            case 'ZERO_RESULTS': return '<span style="color:#aaa;font-size:11px;">ルートなし(圏外)</span>';
+            case 'NOT_FOUND': return '住所不明';
+            case 'MAX_ROUTE_LENGTH_EXCEEDED': return '距離超過';
+            default: return '--';
         }
     }
 
@@ -331,6 +353,13 @@
             unitSystem: google.maps.UnitSystem.METRIC,
         };
 
+        // TRANSITの場合、現在時刻を明示的に指定（ルートが見つかりやすくなる場合があります）
+        if (mode === 'TRANSIT') {
+            request.transitOptions = {
+                departureTime: new Date()
+            };
+        }
+
         return new Promise((resolve, reject) => {
             distanceMatrixService.getDistanceMatrix(request, (response, status) => {
                 if (status === 'OK') {
@@ -338,7 +367,7 @@
                 } else {
                     console.warn(`Matrix API Warn (${mode}):`, status);
                     // エラーでも止まらないように空結果を返す
-                    resolve({ rows: [{ elements: [] }] });
+                    resolve({ rows: [] }); 
                 }
             });
         });
@@ -349,7 +378,6 @@
         
         stores.forEach((store, index) => {
             const isHaneda = (store.id === 'haneda');
-            // リストの先頭かつ、TOP5に入った場合のみ「最短」をつける
             const isClosest = (index === 0);
 
             const card = document.createElement('div');
@@ -367,7 +395,7 @@
                 
                 <div class="routes-grid">
                     <div class="route-info">
-                        <div class="route-header">🚗 車 (目安)</div>
+                        <div class="route-header">🚗 車</div>
                         <div class="route-time">${store.driving.text}</div>
                         <div class="route-dist">${store.driving.distText}</div>
                     </div>
