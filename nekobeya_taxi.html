@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ねこべやタクシー料金計算</title>
+    <title>ペットタクシー料金計算</title>
     <style>
         :root {
             --primary-color: #FF8C00;
@@ -129,11 +129,11 @@
             color: var(--primary-color);
         }
 
-        /* 往復チェックボックス */
+        /* チェックボックス共通スタイル */
         .checkbox-wrapper {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding: 15px;
             background-color: #fff8e1;
             border-radius: 12px;
@@ -151,9 +151,10 @@
         .checkbox-wrapper label {
             margin: 0;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: var(--primary-dark);
+            flex: 1; /* ラベルを広げてクリックしやすく */
         }
         .discount-badge {
             background: #ff4d4d;
@@ -161,8 +162,21 @@
             font-size: 12px;
             padding: 2px 6px;
             border-radius: 4px;
-            margin-left: 10px;
+            margin-left: 8px;
             vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* 有料道路回避用のスタイル微調整 */
+        .checkbox-avoid {
+            background-color: #f0f4c3;
+            border-color: #dce775;
+        }
+        .checkbox-avoid label {
+            color: #558b2f;
+        }
+        .checkbox-avoid input {
+            accent-color: #7cb342;
         }
 
         button.calc-btn {
@@ -176,6 +190,7 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(230, 126, 0, 0.3);
+            margin-top: 10px;
         }
         button.calc-btn:active { transform: scale(0.98); }
 
@@ -253,7 +268,7 @@
 
     <div id="mode-map">
         <div class="form-group">
-            <label for="origin-select">出発地</label>
+            <label for="origin-select">店舗名</label>
             <div class="select-wrapper">
                 <select id="origin-select" onchange="toggleOriginInput()">
                     <option value="minato">ねこべや港区本店</option>
@@ -287,7 +302,14 @@
         </div>
     </div>
 
-    <div class="checkbox-wrapper" onclick="toggleCheckbox()">
+    <div class="checkbox-wrapper checkbox-avoid" onclick="toggleCheckbox('avoid-tolls')">
+        <input type="checkbox" id="avoid-tolls">
+        <label for="avoid-tolls">
+            有料道路を使わない（距離優先）
+        </label>
+    </div>
+
+    <div class="checkbox-wrapper" onclick="toggleCheckbox('round-trip')">
         <input type="checkbox" id="round-trip">
         <label for="round-trip">
             往復で利用する
@@ -327,7 +349,7 @@
     let directionsRenderer;
     let currentMode = 'map';
 
-    // 登録地の住所定義（Googleマップ用に東京都を補完しています）
+    // 登録地の住所定義
     const STORE_ADDRESSES = {
         'minato': '東京都港区芝3丁目13-5',
         'haneda': '東京都大田区羽田1-8-4',
@@ -414,9 +436,10 @@
         setupAutocomplete(input);
     }
 
-    function toggleCheckbox() {
+    // チェックボックス制御（汎用化）
+    function toggleCheckbox(id) {
         if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'LABEL') {
-            const chk = document.getElementById('round-trip');
+            const chk = document.getElementById(id);
             chk.checked = !chk.checked;
         }
     }
@@ -444,6 +467,7 @@
         }
 
         const destination = document.getElementById("destination").value;
+        const avoidTolls = document.getElementById("avoid-tolls").checked; // 有料道路回避の設定取得
         
         const waypointInputs = document.querySelectorAll('.waypoint-input');
         const waypoints = [];
@@ -466,6 +490,7 @@
             destination: destination,
             waypoints: waypoints,
             optimizeWaypoints: true,
+            avoidTolls: avoidTolls, // ★ここに追加
             travelMode: 'DRIVING',
             unitSystem: google.maps.UnitSystem.METRIC
         };
