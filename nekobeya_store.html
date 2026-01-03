@@ -7,10 +7,10 @@
     <title>最寄り店舗検索</title>
     <style>
         :root {
-            --primary-color: #007bff; /* 青系に変更（ビジネスライクに） */
+            --primary-color: #007bff;
             --primary-dark: #0056b3;
             --accent-color: #ffc107;
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f7f6;
             --card-bg: #ffffff;
             --text-color: #333;
         }
@@ -36,7 +36,6 @@
             color: var(--text-color);
         }
 
-        /* 検索フォーム */
         .search-box {
             background: var(--card-bg);
             padding: 20px;
@@ -61,6 +60,12 @@
             box-sizing: border-box;
             background-color: #fafafa;
             margin-bottom: 15px;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: #fff;
         }
 
         button.search-btn {
@@ -74,25 +79,27 @@
             font-weight: bold;
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         button.search-btn:hover { background-color: var(--primary-dark); }
         button.search-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* 結果リスト */
+        /* 結果リストエリア */
         #results-area { display: none; }
         
         .section-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             margin-bottom: 10px;
             color: #666;
-            border-left: 4px solid var(--primary-color);
-            padding-left: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .store-card {
             background: var(--card-bg);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 15px;
             margin-bottom: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -101,42 +108,48 @@
             animation: fadeIn 0.5s ease;
         }
 
-        /* 羽田空港店強調用 */
         .store-card.highlight {
             border: 2px solid var(--accent-color);
             background-color: #fffdf5;
         }
-        .badge {
+        
+        .badges {
             position: absolute;
             top: 10px;
             right: 10px;
-            background: var(--accent-color);
-            color: #333;
+            display: flex;
+            gap: 5px;
+        }
+        .badge {
             font-size: 10px;
             font-weight: bold;
             padding: 2px 8px;
-            border-radius: 10px;
+            border-radius: 4px;
+            color: #fff;
         }
+        .badge-haneda { background: var(--accent-color); color: #333; }
+        .badge-closest { background: #ff5252; }
 
         .store-name {
             font-size: 18px;
             font-weight: bold;
             margin: 0 0 5px 0;
             color: #333;
+            padding-right: 80px; 
         }
         .store-address {
             font-size: 12px;
             color: #888;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
+            display: block;
         }
 
         .routes-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-top: 10px;
-            border-top: 1px dashed #eee;
-            padding-top: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
         }
 
         .route-info {
@@ -144,30 +157,47 @@
             flex-direction: column;
             align-items: center;
             font-size: 13px;
+            position: relative;
+        }
+        .route-info:first-child::after {
+            content: "";
+            position: absolute;
+            right: -5px;
+            top: 10%;
+            height: 80%;
+            width: 1px;
+            background: #eee;
         }
         
-        .route-icon { font-size: 20px; margin-bottom: 2px; }
-        .route-time { font-weight: bold; font-size: 16px; color: var(--primary-dark); }
-        .route-dist { font-size: 11px; color: #666; }
-        .no-route { color: #aaa; font-size: 12px; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        .route-header {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .route-time { 
+            font-weight: 800; 
+            font-size: 18px; 
+            color: var(--primary-dark); 
+            line-height: 1.2;
+        }
+        .route-dist { 
+            font-size: 11px; 
+            color: #666; 
+            margin-top: 2px;
         }
         
-        /* 読み込み中アニメーション */
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 15px auto 0;
             display: none;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .pac-container { z-index: 1000; border-radius: 8px; margin-top: 2px; }
     </style>
@@ -177,142 +207,138 @@
 <body>
 
 <div class="container">
-    <h1>📍 最寄り店舗・所要時間検索</h1>
+    <h1><span>📍</span> 店舗距離検索</h1>
 
     <div class="search-box">
-        <label for="user-address">あなたの住所</label>
+        <label for="user-address">出発地（お客様住所）</label>
         <input type="text" id="user-address" placeholder="例：東京都新宿区西新宿２丁目８−１">
-        <button class="search-btn" onclick="searchStores()">検索する</button>
+        
+        <button class="search-btn" onclick="searchStores()">検索・比較する</button>
         <div id="loader" class="loader"></div>
     </div>
 
     <div id="results-area">
-        <div class="section-title">近い順 TOP 5 (+ 羽田空港店)</div>
+        <div class="section-title">
+            <span>近い順 TOP 5</span>
+            <span style="font-size:10px; font-weight:normal; color:#999;">※車での所要時間順</span>
+        </div>
         <div id="cards-container"></div>
     </div>
 </div>
 
 <script>
-    // 店舗データ定義
+    // 店舗リスト：全10店舗
     const STORES = [
         { id: 'minato', name: 'ねこべや港区本店', address: '東京都港区芝3丁目13-5' },
         { id: 'haneda', name: 'ねこべや羽田空港店', address: '東京都大田区羽田1-8-4' }, // ※必須表示
         { id: 'suginami', name: 'ねこべや杉並店', address: '東京都杉並区宮前4丁目25-28' },
         { id: 'musashino', name: 'ねこべや武蔵野店', address: '東京都武蔵野市関前4-11-25' },
-        { id: 'edogawa', name: 'ねこべや江戸川店', address: '東京都江戸川区新堀1丁目24-1' }
+        { id: 'edogawa', name: 'ねこべや江戸川店', address: '東京都江戸川区新堀1丁目24-1' },
+        { id: 'machida', name: 'ねこべや町田店', address: '東京都町田市鶴間6-7-10' },
+        { id: 'ebina', name: 'ねこべや海老名店', address: '神奈川県海老名市大谷北3-18-3' },
+        { id: 'koshigaya', name: 'ねこべや越谷店', address: '埼玉県越谷市御殿町4-54' },
+        { id: 'matsudo', name: 'ねこべや松戸店', address: '千葉県松戸市南花島4-61-37' },
+        { id: 'omiya', name: 'ねこべや大宮店', address: '埼玉県さいたま市大宮区堀の内町3丁目310' }
     ];
 
     let distanceMatrixService;
 
     function initMap() {
-        // オートコンプリートの設定
         const input = document.getElementById("user-address");
         const options = {
             componentRestrictions: { country: "jp" },
             fields: ["formatted_address", "geometry", "name"],
         };
         new google.maps.places.Autocomplete(input, options);
-
-        // 距離計算サービスの初期化
         distanceMatrixService = new google.maps.DistanceMatrixService();
     }
 
-    // APIロード完了時に実行
     window.onload = initMap;
 
     async function searchStores() {
         const userAddress = document.getElementById("user-address").value;
+
         if (!userAddress) {
             alert("住所を入力してください。");
             return;
         }
 
-        // UI制御
+        // UIリセット
         document.querySelector('.search-btn').disabled = true;
         document.getElementById('loader').style.display = 'block';
         document.getElementById('results-area').style.display = 'none';
         document.getElementById('cards-container').innerHTML = '';
 
         try {
-            // 店舗の住所リストを作成
             const destinations = STORES.map(store => store.address);
 
-            // 1. 車での計算 (DRIVING)
+            // 車(DRIVING)と電車(TRANSIT)で計算
             const drivingPromise = getDistanceMatrix(userAddress, destinations, 'DRIVING');
-            
-            // 2. 公共交通機関での計算 (TRANSIT)
             const transitPromise = getDistanceMatrix(userAddress, destinations, 'TRANSIT');
 
-            // 並行して実行して待つ
-            const [drivingResults, transitResults] = await Promise.all([drivingPromise, transitResults]);
+            const [drivingResults, transitResults] = await Promise.all([drivingPromise, transitPromise]);
 
-            // 結果を結合して整形
             let calculatedStores = STORES.map((store, index) => {
-                const dRes = drivingResults.rows[0].elements[index];
-                const tRes = transitResults.rows[0].elements[index];
+                const dEl = drivingResults.rows[0].elements[index] || {};
+                const tEl = transitResults.rows[0].elements[index] || {};
 
                 return {
                     ...store,
                     driving: {
-                        status: dRes.status,
-                        text: dRes.duration ? dRes.duration.text : '--',
-                        value: dRes.duration ? dRes.duration.value : 9999999, // ソート用秒数
-                        distText: dRes.distance ? dRes.distance.text : '--'
+                        status: dEl.status,
+                        text: (dEl.duration && dEl.status === 'OK') ? dEl.duration.text : '--',
+                        value: (dEl.duration && dEl.status === 'OK') ? dEl.duration.value : 9999999, // ソート用(秒)
+                        distText: (dEl.distance && dEl.status === 'OK') ? dEl.distance.text : '-'
                     },
                     transit: {
-                        status: tRes.status,
-                        text: tRes.duration ? tRes.duration.text : '--',
-                        distText: tRes.distance ? tRes.distance.text : '--'
+                        status: tEl.status,
+                        text: (tEl.duration && tEl.status === 'OK') ? tEl.duration.text : '--',
+                        distText: (tEl.distance && tEl.status === 'OK') ? tEl.distance.text : '-'
                     }
                 };
             });
 
-            // ソート（車の所要時間が短い順）
-            // ※距離順がいい場合は driving.distValue などを取得して比較してください
+            // 車の所要時間順にソート（近い順）
             calculatedStores.sort((a, b) => a.driving.value - b.driving.value);
 
-            // 表示用リストの作成ロジック
-            // ルール: TOP5を表示するが、その中に羽田が含まれていなければ追加する
+            // TOP5の抽出
             let displayList = calculatedStores.slice(0, 5);
-            
-            // 羽田がTOP5に含まれているか確認
             const hasHaneda = displayList.some(s => s.id === 'haneda');
-
+            
+            // 羽田がTOP5にいなければ強制追加
             if (!hasHaneda) {
-                // 含まれていない場合、羽田を探してリストの末尾に追加
                 const hanedaObj = calculatedStores.find(s => s.id === 'haneda');
-                if (hanedaObj) {
-                    displayList.push(hanedaObj);
-                }
+                if (hanedaObj) displayList.push(hanedaObj);
             }
 
-            // カード生成
             renderCards(displayList);
-
             document.getElementById('results-area').style.display = 'block';
 
         } catch (error) {
             console.error(error);
-            alert("計算に失敗しました。住所が正しいか確認してください。");
+            alert("検索に失敗しました。APIキーや通信状況を確認してください。");
         } finally {
             document.querySelector('.search-btn').disabled = false;
             document.getElementById('loader').style.display = 'none';
         }
     }
 
-    // Distance Matrix APIをPromise化して使いやすくする関数
     function getDistanceMatrix(origin, destinations, mode) {
+        const request = {
+            origins: [origin],
+            destinations: destinations,
+            travelMode: google.maps.TravelMode[mode],
+            unitSystem: google.maps.UnitSystem.METRIC,
+        };
+
         return new Promise((resolve, reject) => {
-            distanceMatrixService.getDistanceMatrix({
-                origins: [origin],
-                destinations: destinations,
-                travelMode: google.maps.TravelMode[mode],
-                unitSystem: google.maps.UnitSystem.METRIC,
-            }, (response, status) => {
+            distanceMatrixService.getDistanceMatrix(request, (response, status) => {
                 if (status === 'OK') {
                     resolve(response);
                 } else {
-                    reject(status);
+                    console.warn(`Matrix API Warn (${mode}):`, status);
+                    // エラーでも止まらないように空結果を返す
+                    resolve({ rows: [{ elements: [] }] });
                 }
             });
         });
@@ -323,40 +349,32 @@
         
         stores.forEach((store, index) => {
             const isHaneda = (store.id === 'haneda');
+            // リストの先頭かつ、TOP5に入った場合のみ「最短」をつける
+            const isClosest = (index === 0);
+
             const card = document.createElement('div');
-            
-            // 羽田を目立たせるクラス付与
             card.className = `store-card ${isHaneda ? 'highlight' : ''}`;
             
-            let badgeHtml = '';
-            if (isHaneda) {
-                badgeHtml = `<span class="badge">羽田空港店</span>`;
-            } else if (index === 0) {
-                badgeHtml = `<span class="badge" style="background:#dc3545; color:white;">最寄りNo.1</span>`;
-            }
-
-            // データの整形（到達不能な場合など）
-            const dTime = store.driving.status === 'OK' ? store.driving.text : '経路なし';
-            const dDist = store.driving.status === 'OK' ? store.driving.distText : '-';
-            
-            const tTime = store.transit.status === 'OK' ? store.transit.text : '経路なし';
-            const tDist = store.transit.status === 'OK' ? store.transit.distText : '-';
+            let badgesHtml = '<div class="badges">';
+            if (isClosest) badgesHtml += `<span class="badge badge-closest">最短</span>`;
+            if (isHaneda) badgesHtml += `<span class="badge badge-haneda">羽田空港店</span>`;
+            badgesHtml += '</div>';
 
             card.innerHTML = `
-                ${badgeHtml}
+                ${badgesHtml}
                 <div class="store-name">${store.name}</div>
-                <div class="store-address">${store.address}</div>
+                <span class="store-address">${store.address}</span>
                 
                 <div class="routes-grid">
                     <div class="route-info">
-                        <div class="route-icon">🚗</div>
-                        <div class="route-time" style="${store.driving.status !== 'OK' ? 'font-size:12px;color:#aaa;' : ''}">${dTime}</div>
-                        <div class="route-dist">${dDist}</div>
+                        <div class="route-header">🚗 車 (目安)</div>
+                        <div class="route-time">${store.driving.text}</div>
+                        <div class="route-dist">${store.driving.distText}</div>
                     </div>
                     <div class="route-info">
-                        <div class="route-icon">🚃</div>
-                        <div class="route-time" style="${store.transit.status !== 'OK' ? 'font-size:12px;color:#aaa;' : ''}">${tTime}</div>
-                        <div class="route-dist">${tDist}</div>
+                        <div class="route-header">🚃 公共交通</div>
+                        <div class="route-time">${store.transit.text}</div>
+                        <div class="route-dist">${store.transit.distText}</div>
                     </div>
                 </div>
             `;
