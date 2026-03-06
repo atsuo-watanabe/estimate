@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -99,7 +100,7 @@
             background: #fafafa;
             border: 2px solid #eee;
             border-radius: 12px;
-            padding: 5px 15px; /* 上下のパディングを調整 */
+            padding: 5px 15px;
             transition: 0.3s;
             display: flex;
             align-items: center;
@@ -109,7 +110,6 @@
             background: #fff;
         }
         
-        /* 10分単位にするため step="600" を設定 */
         input[type="datetime-local"] {
             width: 100%;
             padding: 10px 0;
@@ -213,6 +213,16 @@
             vertical-align: middle;
             white-space: nowrap;
         }
+        .add-badge {
+            background: #1976d2;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
 
         .checkbox-avoid {
             background-color: #f0f4c3;
@@ -220,6 +230,52 @@
         }
         .checkbox-avoid label { color: #558b2f; }
         .checkbox-avoid input { accent-color: #7cb342; }
+
+        /* 羽田空港チェック */
+        .haneda-box {
+            background-color: #e3f2fd;
+            border: 2px solid #90caf9;
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+        .haneda-check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .haneda-check-item input {
+            accent-color: #1976d2;
+            transform: scale(1.4);
+            cursor: pointer;
+        }
+        .haneda-check-item label {
+            margin: 0;
+            font-size: 15px;
+            font-weight: bold;
+            color: #1565c0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* 手動追加料金エリア */
+        .extra-charges-box {
+            background: #f3e5f5;
+            border: 2px solid #ce93d8;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .extra-charges-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #6a1b9a;
+            margin-bottom: 10px;
+        }
+        .extra-charges-box input[type="number"] {
+            background: #fff;
+        }
 
         button.calc-btn {
             width: 100%;
@@ -348,25 +404,64 @@
 
     <div id="mode-manual" class="hidden">
         <div class="form-group">
-            <label for="manual-dist">距離 (km)</label>
-            <input type="number" id="manual-dist" placeholder="例：15.5" step="0.1">
-            <p style="font-size:12px; color:#888; margin-top:5px;">※Googleマップを使わず、距離だけで計算します。</p>
+            <label for="manual-base-fare">初乗り料金</label>
+            <select id="manual-base-fare">
+                <option value="1650">1,650円（羽田・港区）</option>
+                <option value="3300">3,300円（杉並・武蔵野・江戸川）</option>
+                <option value="5500">5,500円（その他）</option>
+            </select>
         </div>
+        <div class="form-group">
+            <label for="manual-dist">行きの距離 (km)</label>
+            <input type="number" id="manual-dist" placeholder="例：15.5" step="0.1">
+        </div>
+        <div class="form-group" id="manual-return-group" style="display:none;">
+            <label for="manual-dist-return">帰りの距離 (km)</label>
+            <input type="number" id="manual-dist-return" placeholder="例：12.0" step="0.1">
+        </div>
+        <p style="font-size:12px; color:#888; margin-bottom:15px;">※Googleマップを使わず、距離だけで計算します。</p>
     </div>
 
+    <!-- ✅ デフォルトチェック済みに変更 -->
     <div class="checkbox-wrapper checkbox-avoid" onclick="toggleCheckbox('avoid-tolls')">
-        <input type="checkbox" id="avoid-tolls">
+        <input type="checkbox" id="avoid-tolls" checked>
         <label for="avoid-tolls">
             有料道路を使わない（距離優先）
         </label>
     </div>
 
+    <!-- 羽田空港経由 -->
+    <div class="haneda-box">
+        <div class="haneda-check-item" onclick="this.querySelector('input').click(); toggleHanedaSelect()">
+            <input type="checkbox" id="via-haneda" onclick="event.stopPropagation(); toggleHanedaSelect()">
+            <label for="via-haneda">✈️ 羽田空港を経由する</label>
+            <span class="add-badge">+2,200円</span>
+        </div>
+        <div id="haneda-select-box" style="display:none; margin-top:10px;">
+            <select id="haneda-trips" style="font-size:14px; padding:10px 12px;">
+                <option value="one">片道のみ（+2,200円）</option>
+                <option value="both">往復（+4,400円）</option>
+            </select>
+        </div>
+    </div>
+
     <div class="checkbox-wrapper" onclick="toggleCheckbox('round-trip')">
-        <input type="checkbox" id="round-trip">
+        <input type="checkbox" id="round-trip" onchange="toggleReturnInputs()">
         <label for="round-trip">
             往復で利用する
             <span class="discount-badge">10% OFF</span>
         </label>
+    </div>
+
+    <!-- 住所検索モード：帰りルート自動計算の案内 -->
+    <div id="return-dist-box" style="display:none; background:#fff3e0; border:2px solid #ffcc80; border-radius:12px; padding:12px 15px; margin-bottom:15px; font-size:13px; color:#e65100;">
+        📍 帰りのルートはお客様宅→同じ店舗で自動計算します。
+    </div>
+
+    <!-- 追加料金 -->
+    <div class="extra-charges-box">
+        <div class="extra-charges-title">➕ 追加料金（任意）</div>
+        <input type="number" id="extra-charge-amount" placeholder="金額を入力（例：1000）" min="0" step="100">
     </div>
 
     <button class="calc-btn" onclick="startCalculation()">料金を計算する</button>
@@ -388,8 +483,12 @@
             <div id="round-trip-tag" style="display:none; color:#d32f2f; font-weight:bold; font-size:14px; margin-top:5px;">
                 🎉 往復割引(10%OFF) 適用済み
             </div>
+            <div id="round-trip-base-tag" style="display:none; color:#888; font-size:12px; margin-top:4px;"></div>
+            <div id="haneda-tag" style="display:none; color:#1565c0; font-weight:bold; font-size:13px; margin-top:5px;"></div>
+            <div id="extra-tag" style="display:none; color:#6a1b9a; font-size:13px; margin-top:4px;"></div>
         </div>
         <p class="note">※片道：初乗り3kmまで1,650円、以降1kmごとに550円（端数切上）</p>
+        <p class="note">※羽田空港経由：+2,200円（片道）</p>
     </div>
 
     <div id="map"></div>
@@ -409,6 +508,8 @@
         'musashino': '東京都武蔵野市関前4-11-25',
         'edogawa': '東京都江戸川区新堀1丁目24-1'
     };
+
+    const HANEDA_SURCHARGE = 2200; // 羽田空港経由追加料金（片道）
 
     function initMap() {
         const tokyo = { lat: 35.6895, lng: 139.6917 };
@@ -439,13 +540,31 @@
     function toggleOriginInput() {
         const select = document.getElementById("origin-select");
         const customContainer = document.getElementById("origin-custom-container");
-        
         if (select.value === "other") {
             customContainer.style.display = "block";
             document.getElementById("origin-custom").focus();
         } else {
             customContainer.style.display = "none";
         }
+    }
+
+    function toggleReturnOriginInput() {}  // 不使用（互換用）
+
+    function toggleReturnInputs() {
+        const isRoundTrip = document.getElementById('round-trip').checked;
+        const retDistBox = document.getElementById('return-dist-box');
+        if (retDistBox) retDistBox.style.display = (isRoundTrip && currentMode === 'map') ? 'block' : 'none';
+        const retManualGroup = document.getElementById('manual-return-group');
+        if (retManualGroup) retManualGroup.style.display = (isRoundTrip && currentMode === 'manual') ? 'block' : 'none';
+    }
+
+    function toggleHanedaSelect() {
+        updateHanedaSelectVisibility();
+    }
+
+    function updateHanedaSelectVisibility() {
+        const checked = document.getElementById('via-haneda').checked;
+        document.getElementById('haneda-select-box').style.display = checked ? 'block' : 'none';
     }
 
     function switchTab(mode) {
@@ -463,6 +582,7 @@
             document.getElementById('map').style.display = 'none';
         }
         document.getElementById("result").style.display = "none";
+        toggleReturnInputs();
     }
 
     function addWaypoint() {
@@ -492,6 +612,7 @@
         if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'LABEL') {
             const chk = document.getElementById(id);
             chk.checked = !chk.checked;
+            if (id === 'round-trip') toggleReturnInputs();
         }
     }
 
@@ -507,46 +628,55 @@
         }
     }
 
+    // 店舗ごとの初乗り料金
+    const STORE_BASE_FARE = {
+        'minato':    1650,
+        'haneda':    1650,
+        'suginami':  3300,
+        'musashino': 3300,
+        'edogawa':   3300,
+        'other':     5500
+    };
+
+    // 片道の距離から料金を計算するヘルパー（baseFare を外から渡す）
+    function calcOnewayFare(distanceKm, baseFare) {
+        const addFare = 550;
+        if (distanceKm <= 3) return baseFare;
+        return baseFare + Math.ceil(distanceKm - 3) * addFare;
+    }
+
+    function getHanedaSurcharge() {
+        if (!document.getElementById('via-haneda').checked) return 0;
+        const trips = document.getElementById('haneda-trips').value;
+        return trips === 'both' ? HANEDA_SURCHARGE * 2 : HANEDA_SURCHARGE;
+    }
+
     function calculateByMap() {
         const selectVal = document.getElementById("origin-select").value;
-        let origin = "";
+        let origin = selectVal === "other"
+            ? document.getElementById("origin-custom").value
+            : STORE_ADDRESSES[selectVal];
 
-        if (selectVal === "other") {
-            origin = document.getElementById("origin-custom").value;
-            if (!origin) {
-                alert("出発地の住所を入力してください。");
-                return;
-            }
-        } else {
-            origin = STORE_ADDRESSES[selectVal];
-        }
+        if (!origin) { alert("出発地の住所を入力してください。"); return; }
 
         const destination = document.getElementById("destination").value;
+        if (!destination) { alert("お届け先住所を入力してください。"); return; }
+
         const avoidTolls = document.getElementById("avoid-tolls").checked;
         const timeInput = document.getElementById("dept-time").value;
-        
+        const isRoundTrip = document.getElementById('round-trip').checked;
+        const baseFare = STORE_BASE_FARE[selectVal] || 5500;
+
         const waypointInputs = document.querySelectorAll('.waypoint-input');
         const waypoints = [];
         waypointInputs.forEach(input => {
-            if (input.value.trim() !== "") {
-                waypoints.push({
-                    location: input.value,
-                    stopover: true
-                });
-            }
+            if (input.value.trim() !== "") waypoints.push({ location: input.value, stopover: true });
         });
 
-        if (!destination) {
-            alert("お届け先住所を入力してください。");
-            return;
-        }
-
         const request = {
-            origin: origin,
-            destination: destination,
-            waypoints: waypoints,
+            origin, destination, waypoints,
             optimizeWaypoints: true,
-            avoidTolls: avoidTolls,
+            avoidTolls,
             travelMode: 'DRIVING',
             unitSystem: google.maps.UnitSystem.METRIC
         };
@@ -554,98 +684,122 @@
         let isPredicted = false;
         if (timeInput) {
             const departureDate = new Date(timeInput);
-            const now = new Date();
-            
-            if (departureDate < now) {
-                // 過去の場合は無視
-            } else {
-                request.drivingOptions = {
-                    departureTime: departureDate,
-                    trafficModel: 'bestguess'
-                };
+            if (departureDate >= new Date()) {
+                request.drivingOptions = { departureTime: departureDate, trafficModel: 'bestguess' };
                 isPredicted = true;
             }
         }
 
         directionsService.route(request, function(result, status) {
-            if (status == 'OK') {
-                directionsRenderer.setDirections(result);
-                document.getElementById('map').style.display = 'block';
-                
-                let totalDistanceMeters = 0;
-                let totalDurationSeconds = 0;
-                const legs = result.routes[0].legs;
-                
-                legs.forEach(leg => {
-                    totalDistanceMeters += leg.distance.value;
-                    if (leg.duration_in_traffic) {
-                        totalDurationSeconds += leg.duration_in_traffic.value;
-                    } else {
-                        totalDurationSeconds += leg.duration.value;
+            if (status !== 'OK') { alert("ルートが見つかりませんでした。\nエラー: " + status); return; }
+
+            directionsRenderer.setDirections(result);
+            document.getElementById('map').style.display = 'block';
+
+            let totalDistMeters = 0, totalDurSeconds = 0;
+            result.routes[0].legs.forEach(leg => {
+                totalDistMeters += leg.distance.value;
+                totalDurSeconds += (leg.duration_in_traffic || leg.duration).value;
+            });
+
+            const distKm = totalDistMeters / 1000;
+            const distText = distKm.toFixed(1) + " km";
+            const hours = Math.floor(totalDurSeconds / 3600);
+            const minutes = Math.floor((totalDurSeconds % 3600) / 60);
+            const durText = (hours > 0 ? hours + "時間 " : "") + minutes + "分";
+
+            const timeNote = document.getElementById("time-note");
+            timeNote.innerText = isPredicted ? "(渋滞予測)" : "";
+            timeNote.style.color = "#d32f2f";
+
+            if (isRoundTrip) {
+                directionsService.route({
+                    origin: destination, destination: origin,
+                    avoidTolls, travelMode: 'DRIVING',
+                    unitSystem: google.maps.UnitSystem.METRIC
+                }, function(retResult, retStatus) {
+                    let returnDistKm = distKm;
+                    if (retStatus === 'OK') {
+                        let retMeters = 0;
+                        retResult.routes[0].legs.forEach(leg => retMeters += leg.distance.value);
+                        returnDistKm = retMeters / 1000;
                     }
+                    displayFinalPrice(distKm, returnDistKm, distText, durText, baseFare);
                 });
-
-                const distanceKm = totalDistanceMeters / 1000;
-                const distanceText = (distanceKm).toFixed(1) + " km";
-                
-                const hours = Math.floor(totalDurationSeconds / 3600);
-                const minutes = Math.floor((totalDurationSeconds % 3600) / 60);
-                let durationText = "";
-                if (hours > 0) durationText += hours + "時間 ";
-                durationText += minutes + "分";
-
-                const timeNote = document.getElementById("time-note");
-                if (isPredicted) {
-                    timeNote.innerText = "(渋滞予測)";
-                    timeNote.style.color = "#d32f2f";
-                } else {
-                    timeNote.innerText = "";
-                }
-
-                displayFinalPrice(distanceKm, distanceText, durationText);
             } else {
-                alert("ルートが見つかりませんでした。\nエラー: " + status);
+                displayFinalPrice(distKm, distKm, distText, durText, baseFare);
             }
         });
     }
 
     function calculateByManual() {
         const distInput = document.getElementById("manual-dist").value;
-        if (!distInput || distInput <= 0) {
-            alert("有効な距離(km)を入力してください。");
-            return;
+        if (!distInput || distInput <= 0) { alert("有効な距離(km)を入力してください。"); return; }
+        const goDistKm = parseFloat(distInput);
+        const isRoundTrip = document.getElementById('round-trip').checked;
+
+        let returnDistKm = goDistKm;
+        if (isRoundTrip) {
+            const retInput = document.getElementById("manual-dist-return").value;
+            if (retInput && retInput > 0) returnDistKm = parseFloat(retInput);
         }
-        const distanceKm = parseFloat(distInput);
+
         document.getElementById("time-note").innerText = "";
-        displayFinalPrice(distanceKm, distanceKm + " km", "--");
+        const baseFare = parseInt(document.getElementById('manual-base-fare').value) || 5500;
+        displayFinalPrice(goDistKm, returnDistKm, goDistKm + " km", "--", baseFare);
     }
 
-    function displayFinalPrice(distanceKm, distText, durText) {
-        let price = 0;
-        const baseFare = 1650;
-        const addFare = 550;
+    function displayFinalPrice(goDistKm, returnDistKm, distText, durText, baseFare) {
+        const isRoundTrip = document.getElementById('round-trip').checked;
+        const hanedaSurcharge = getHanedaSurcharge();
+        const extraAmt = parseInt(document.getElementById('extra-charge-amount').value) || 0;
 
-        if (distanceKm <= 3) {
-            price = baseFare;
+        const goFare = calcOnewayFare(goDistKm, baseFare);
+        const returnFare = calcOnewayFare(returnDistKm, baseFare);
+
+        let subtotal = 0;
+        const baseTag = document.getElementById('round-trip-base-tag');
+
+        if (isRoundTrip) {
+            subtotal = Math.floor((goFare + returnFare) * 0.9);
+            document.getElementById('round-trip-tag').style.display = 'block';
+            if (goFare !== returnFare) {
+                baseTag.innerText = `（行き ${goFare.toLocaleString()}円 ＋ 帰り ${returnFare.toLocaleString()}円）× 10%OFF`;
+                baseTag.style.display = 'block';
+            } else {
+                baseTag.style.display = 'none';
+            }
         } else {
-            const extraDist = distanceKm - 3;
-            const extraUnit = Math.ceil(extraDist); 
-            price = baseFare + (extraUnit * addFare);
+            subtotal = goFare;
+            document.getElementById('round-trip-tag').style.display = 'none';
+            baseTag.style.display = 'none';
         }
 
-        const isRoundTrip = document.getElementById('round-trip').checked;
-        if (isRoundTrip) {
-            price = (price * 2) * 0.9;
-            price = Math.floor(price);
-            document.getElementById('round-trip-tag').style.display = 'block';
+        const totalPrice = subtotal + hanedaSurcharge + extraAmt;
+
+        // 羽田タグ
+        const hanedaTag = document.getElementById('haneda-tag');
+        if (hanedaSurcharge > 0) {
+            const label = document.getElementById('haneda-trips').value === 'both' ? '往復' : '片道';
+            hanedaTag.innerText = `✈️ 羽田空港経由（${label}）+${hanedaSurcharge.toLocaleString()}円`;
+            hanedaTag.style.display = 'block';
         } else {
-            document.getElementById('round-trip-tag').style.display = 'none';
+            hanedaTag.style.display = 'none';
+        }
+
+        // 追加料金タグ
+        const extraTag = document.getElementById('extra-tag');
+        if (extraAmt > 0) {
+            extraTag.innerText = `➕ 追加料金 +${extraAmt.toLocaleString()}円`;
+            extraTag.style.display = 'block';
+        } else {
+            extraTag.style.display = 'none';
         }
 
         document.getElementById("dist-text").innerText = distText;
         document.getElementById("dur-text").innerText = durText;
-        document.getElementById("price-text").innerHTML = price.toLocaleString() + "<span>円</span>";
-        
+        document.getElementById("price-text").innerHTML = totalPrice.toLocaleString() + "<span>円</span>";
+
         const resultBox = document.getElementById("result");
         resultBox.style.display = "block";
         resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
