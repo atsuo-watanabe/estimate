@@ -487,8 +487,8 @@
             <div id="haneda-tag" style="display:none; color:#1565c0; font-weight:bold; font-size:13px; margin-top:5px;"></div>
             <div id="extra-tag" style="display:none; color:#6a1b9a; font-size:13px; margin-top:4px;"></div>
         </div>
-        <p class="note">※片道：初乗り3kmまで1,650円、以降1kmごとに550円（端数切上）</p>
-        <p class="note">※羽田空港経由：+2,200円（片道）</p>
+        <p class="note" id="note-base-fare">※片道：初乗り3kmまで--円、以降1kmごとに550円（端数切上）</p>
+        <p class="note">※羽田空港経由：+2,200円/回</p>
     </div>
 
     <div id="map"></div>
@@ -799,6 +799,7 @@
         document.getElementById("dist-text").innerText = distText;
         document.getElementById("dur-text").innerText = durText;
         document.getElementById("price-text").innerHTML = totalPrice.toLocaleString() + "<span>円</span>";
+        document.getElementById("note-base-fare").innerText = `※片道：初乗り3kmまで${baseFare.toLocaleString()}円、以降1kmごとに550円（端数切上）`;
 
         const resultBox = document.getElementById("result");
         resultBox.style.display = "block";
